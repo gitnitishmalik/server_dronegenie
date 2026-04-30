@@ -8,25 +8,25 @@ datasource db {
 }
 
 model User {
-  id                String              @id @default(auto()) @map("_id") @db.ObjectId
-  name              String
-  email             String              @unique
-  phone             String              @unique
-  roles             UserRole
-  profile           String?
-  password          String
-  isActive          Boolean             @default(true)
-  rtHash            String?
-  otp               String?          
-  expiriesIn        DateTime?
-  otpAttempts       Int                 @default(0)
-  waitForOtp        Boolean
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  
-  // relations            
-  vendor            Vendor?
-  customer          Customer?
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  email       String     @unique
+  phone       String     @unique
+  roles       UserRole[] // ✅ ARRAY (multi-role support)
+  profile     String?
+  password    String
+  isActive    Boolean    @default(true)
+  rtHash      String?
+  otp         String?
+  expiriesIn  DateTime?
+  otpAttempts Int        @default(0)
+  waitForOtp  Boolean
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // relations
+  vendor   Vendor?
+  customer Customer?
 }
 
 model Customer {
@@ -45,11 +45,11 @@ model Customer {
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 
-  // relations 
-  user                 User       @relation(fields: [userId], references: [id])
-  BankDetails          BankDetails[]
-  bidRequests          BidRequest[]
-  orders               Order[]
+  // relations
+  user        User          @relation(fields: [userId], references: [id])
+  BankDetails BankDetails[]
+  bidRequests BidRequest[]
+  orders      Order[]
 }
 
 model Vendor {
@@ -66,10 +66,10 @@ model Vendor {
   PAN                  String      @unique
   isTermsAccepted      Boolean
 
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user          User            @relation(fields: [userId], references: [id])
+  user          User             @relation(fields: [userId], references: [id])
   BankDetails   BankDetails[]
   VendorService VendorService[]
   documents     VendorDocument[]
@@ -77,19 +77,20 @@ model Vendor {
   orders        Order[]
 
   // Payments v2
-  payouts        VendorPayout[]
-  payout_account VendorPayoutAccount?
+  payouts                 VendorPayout[]
+  payout_account          VendorPayoutAccount?
+  dataProcurementRequests DataProcurementRequest[]
 }
 
 model VendorDocument {
-  id                String        @id @default(auto()) @map("_id") @db.ObjectId
-  vendorId          String        @db.ObjectId
-  title             String
-  document       String
-  vendor            Vendor        @relation(fields: [vendorId], references: [id])
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  vendorId String @db.ObjectId
+  title    String
+  document String
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model BankDetails {
@@ -111,13 +112,12 @@ model BankDetails {
   // Provider-neutral; stays null until vendor is onboarded for automated payouts.
   provider_payout_account_id String?
 
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   vendor   Vendor?   @relation(fields: [vendorId], references: [id])
   customer Customer? @relation(fields: [customerId], references: [id])
 }
-
 
 // enums
 enum UserRole {
@@ -151,98 +151,96 @@ model ServiceCategory {
   description       String?
   shortDesc         String?
   image             String?
-  status            CategoryStatus  @default(ACTIVE)
+  status            CategoryStatus @default(ACTIVE)
 
-  metaTitle         String?
-  metaDescription   String?
-  metaKeyword       String?
+  metaTitle       String?
+  metaDescription String?
+  metaKeyword     String?
 
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  media             CategoryMedia[]
-  droneServices     DroneServiceCategory[]
-   // NEW: link to WCUProperties
-  wcuProperties     WCUPropertiesCategory[]
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  media         CategoryMedia[]
+  droneServices DroneServiceCategory[]
+  // NEW: link to WCUProperties
+  wcuProperties WCUPropertiesCategory[]
 }
 
-
-enum MediaType{
+enum MediaType {
   IMAGE
   VIDEO
 }
 
-enum MediaSize{
+enum MediaSize {
   HALF
   FULL
 }
 
-model CategoryMedia{
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
+model CategoryMedia {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  categoryId        String            @db.ObjectId
-  category          ServiceCategory   @relation(fields: [categoryId], references: [id])
+  categoryId String          @db.ObjectId
+  category   ServiceCategory @relation(fields: [categoryId], references: [id])
 
-  type              MediaType
-  size              MediaSize
-  url               String
+  type MediaType
+  size MediaSize
+  url  String
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model DroneService {
-  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
-  categoryId          String?         @db.ObjectId
-  industryId          String?         @db.ObjectId
-  service_name        String
-  service_seo_name    String          @unique
-  priorty             Int             @unique
-  unit                String?
-  rate_on_qty         String          @default("No")
-  uav_type            String
-  description         String?
-  gst                 Float?
-  dgCharges           Float?
+  id               String       @id @default(auto()) @map("_id") @db.ObjectId
+  categoryId       String?      @db.ObjectId
+  industryId       String?      @db.ObjectId
+  service_name     String
+  service_seo_name String       @unique
+  priorty          Int          @unique
+  unit             String?
+  rate_on_qty      String       @default("No")
+  uav_type         String
+  description      String?
+  gst              Float?
+  dgCharges        Float?
   // Payments v2 — interprets dgCharges as either a PERCENT (0-100) or a FLAT ₹ amount.
   // Existing rows default to PERCENT, which matches current behaviour (bid-reply adds dgCharges%).
-  dgChargeType        DgChargeType    @default(PERCENT)
-  image               String?
-  feature_needed      String
+  dgChargeType     DgChargeType @default(PERCENT)
+  image            String?
+  feature_needed   String
 
-    metaTitle         String?
-  metaDescription     String?
-  metaKeyword         String?
+  metaTitle       String?
+  metaDescription String?
+  metaKeyword     String?
 
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  VendorService       VendorService[]
-  bidRequests         BidRequest[]
-  orders              Order[]
+  VendorService VendorService[]
+  bidRequests   BidRequest[]
+  orders        Order[]
   // existing join with categories (we'll fix below)
-  categories          DroneServiceCategory[]
+  categories    DroneServiceCategory[]
 
   // 👇 NEW: back relation for DroneServiceIndustry
-  industries          DroneServiceIndustry[]
+  industries DroneServiceIndustry[]
 }
 
-model WCUProperties{
-  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
+model WCUProperties {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  propHeading         String
-  propDescription     String
-  propImage           String?
-  propPriorty         Int             @default(1)
+  propHeading     String
+  propDescription String
+  propImage       String?
+  propPriorty     Int     @default(1)
 
-
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
   // NEW: many-to-many with categories & industries
-  categories          WCUPropertiesCategory[]
-  industries          WCUPropertiesIndustry[]
+  categories WCUPropertiesCategory[]
+  industries WCUPropertiesIndustry[]
 }
 
-enum CategoryStatus{
+enum CategoryStatus {
   ACTIVE
   INACTIVE
 }
@@ -258,139 +256,132 @@ model VendorService {
 }
 
 model Setting {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
-  logo        String?
-  bannerImg   String?
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  logo      String?
+  bannerImg String?
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model BidRequest {
-  id              String            @id @default(auto()) @map("_id") @db.ObjectId
-  customer        Customer          @relation(fields: [customerId], references: [id])
-  customerId      String            @db.ObjectId
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String   @db.ObjectId
 
-  serviceId       String            @db.ObjectId
-  service         DroneService?     @relation(fields: [serviceId], references: [id])
+  serviceId String        @db.ObjectId
+  service   DroneService? @relation(fields: [serviceId], references: [id])
 
-  description     String
-  startDate       DateTime
-  endDate         DateTime
-  area            String?
-  unit            String?
-  location        String?
-  media           String[]
-  status          BidStatus          @default(PENDING)
+  description String
+  startDate   DateTime
+  endDate     DateTime
+  area        String?
+  unit        String?
+  location    String?
+  media       String[]
+  status      BidStatus @default(PENDING)
 
-  bidReply        BidReply[]
-  orders          Order[]
+  bidReply BidReply[]
+  orders   Order[]
 
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-enum BidStatus{
+enum BidStatus {
   PENDING
   AWARDED
 }
 
-enum IndustryStatus{
+enum IndustryStatus {
   ACTIVE
   INACTIVE
 }
 
-model Industry{
-  id                    String            @id @default(auto()) @map("_id") @db.ObjectId
-  industry_name         String
-  industry_seo_name     String
-  image                 String?
-  description           String?
-  priorty               Int
+model Industry {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  industry_name     String
+  industry_seo_name String
+  image             String?
+  description       String?
+  priorty           Int
 
-  metaTitle             String?
-  metaDescription       String?
-  metaKeyword           String?
+  metaTitle       String?
+  metaDescription String?
+  metaKeyword     String?
 
-  media                 IndustryMedia[]
+  media IndustryMedia[]
 
-  status                IndustryStatus    @default(ACTIVE)
+  status IndustryStatus @default(ACTIVE)
 
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-  droneServices         DroneServiceIndustry[]
-  wcuProperties         WCUPropertiesIndustry[]
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  droneServices DroneServiceIndustry[]
+  wcuProperties WCUPropertiesIndustry[]
 }
 
+model IndustryMedia {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-model IndustryMedia{
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
+  industryId String   @db.ObjectId
+  industry   Industry @relation(fields: [industryId], references: [id])
 
-  industryId        String            @db.ObjectId
-  industry          Industry          @relation(fields: [industryId], references: [id])
+  type MediaType
+  size MediaSize
+  url  String
 
-  type              MediaType
-  size              MediaSize
-  url               String
-
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
-
 
 model DroneServiceIndustry {
-  id                    String            @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  industryId   String?      @db.ObjectId
-  serviceId    String?      @db.ObjectId
+  industryId String? @db.ObjectId
+  serviceId  String? @db.ObjectId
 
-  industry   Industry?     @relation(fields: [industryId], references: [id])
-  service    DroneService? @relation(fields: [serviceId], references: [id])
+  industry Industry?     @relation(fields: [industryId], references: [id])
+  service  DroneService? @relation(fields: [serviceId], references: [id])
 
   @@unique([industryId, serviceId])
 }
 
-
 model DroneServiceCategory {
-  id                    String            @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
   // Composite ID of both foreign keys
-  categoryId   String?          @db.ObjectId
-  serviceId    String?          @db.ObjectId
+  categoryId String? @db.ObjectId
+  serviceId  String? @db.ObjectId
 
-  category     ServiceCategory? @relation(fields: [categoryId], references: [id])
-  service      DroneService?    @relation(fields: [serviceId], references: [id])
+  category ServiceCategory? @relation(fields: [categoryId], references: [id])
+  service  DroneService?    @relation(fields: [serviceId], references: [id])
 
   @@unique([categoryId, serviceId])
 }
 
-
 model WCUPropertiesCategory {
-  id          String          @id @default(auto()) @map("_id") @db.ObjectId
-  propertyId  String?          @db.ObjectId
-  categoryId  String?          @db.ObjectId
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId String? @db.ObjectId
+  categoryId String? @db.ObjectId
 
-  property    WCUProperties?   @relation(fields: [propertyId], references: [id])
-  category    ServiceCategory? @relation(fields: [categoryId], references: [id])
+  property WCUProperties?   @relation(fields: [propertyId], references: [id])
+  category ServiceCategory? @relation(fields: [categoryId], references: [id])
 
   @@unique([propertyId, categoryId])
 }
 
-
-
 model WCUPropertiesIndustry {
-  id          String        @id @default(auto()) @map("_id") @db.ObjectId
-  propertyId  String?        @db.ObjectId
-  industryId  String?        @db.ObjectId
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId String? @db.ObjectId
+  industryId String? @db.ObjectId
 
-  property    WCUProperties? @relation(fields: [propertyId], references: [id])
-  industry    Industry?      @relation(fields: [industryId], references: [id])
+  property WCUProperties? @relation(fields: [propertyId], references: [id])
+  industry Industry?      @relation(fields: [industryId], references: [id])
 
   @@unique([propertyId, industryId])
 }
 
-
-enum ReplyStatus{
+enum ReplyStatus {
   PENDING
   ACCEPTED
   COMPLETED
@@ -400,107 +391,103 @@ enum ReplyStatus{
   REJECTED
 }
 
-model BidReply{
-  id            String            @id @default(auto()) @map("_id") @db.ObjectId
+model BidReply {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  vendor        Vendor            @relation(fields: [vendorId], references: [id])
-  vendorId      String            @db.ObjectId
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+  vendorId String @db.ObjectId
 
-  bidRequests   BidRequest        @relation(fields: [bidReqId], references: [id])
-  bidReqId      String            @db.ObjectId
+  bidRequests BidRequest @relation(fields: [bidReqId], references: [id])
+  bidReqId    String     @db.ObjectId
 
-  description   String?
-  media         String[]
-  price         Float?
-  cstmrPrice    Float?
-  startDate     DateTime
-  endDate       DateTime
-  status        ReplyStatus       @default(PENDING)
+  description String?
+  media       String[]
+  price       Float?
+  cstmrPrice  Float?
+  startDate   DateTime
+  endDate     DateTime
+  status      ReplyStatus @default(PENDING)
 
   // Payments v2 — vendor's proposed milestone breakdown submitted with the bid.
   // Shape: [{ title: string, description?: string, vendor_amount: number }, ...]
   // Frozen onto OrderMilestone rows at bid-accept time.
   proposed_milestones Json?
 
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // A vendor can only have one active BidReply per BidRequest. Prevents
   // duplicate submissions from double-click or racing POSTs.
   @@unique([vendorId, bidReqId])
 }
 
-
 model OrderCounter {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  year      Int
-  seq       Int      @default(0)
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  year Int
+  seq  Int    @default(0)
 
   @@unique([year])
 }
 
-
 model Order {
-  id                        String                @id @default(auto()) @map("_id") @db.ObjectId
-  orderNo                   String                @unique
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  orderNo String @unique
 
-  serviceId                 String                @db.ObjectId
-  service                   DroneService          @relation(fields: [serviceId], references: [id])
-  service_name              String
-  service_desc              String
+  serviceId    String       @db.ObjectId
+  service      DroneService @relation(fields: [serviceId], references: [id])
+  service_name String
+  service_desc String
 
-  startDate                 DateTime
-  endDate                   DateTime
-  job_desc                  String
+  startDate DateTime
+  endDate   DateTime
+  job_desc  String
 
-  bidReqId                  String                @db.ObjectId
-  bidRequest                BidRequest            @relation(fields: [bidReqId], references: [id])
+  bidReqId   String     @db.ObjectId
+  bidRequest BidRequest @relation(fields: [bidReqId], references: [id])
 
-  vendorId                  String                @db.ObjectId
-  vendor                    Vendor                @relation(fields: [vendorId], references: [id])
+  vendorId String @db.ObjectId
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
 
-  customerId                String                @db.ObjectId
-  customer                  Customer              @relation(fields: [customerId], references: [id])
+  customerId String   @db.ObjectId
+  customer   Customer @relation(fields: [customerId], references: [id])
 
-  vendor_gst                Float
-  vendor_price              Float
+  vendor_gst   Float
+  vendor_price Float
 
-  dg_gst                    Float
-  dg_charges                Float
-  dg_price                  Float
+  dg_gst     Float
+  dg_charges Float
+  dg_price   Float
 
-  vendor_total              Float
-  customer_total            Float
-  dg_margin                 Float
+  vendor_total   Float
+  customer_total Float
+  dg_margin      Float
 
-  transactionId             String?
-  transaction_date          DateTime?
-  otp                       String?
-  payment_method            String?
-  status                    OrderStatus           @default(PENDING)
+  transactionId    String?
+  transaction_date DateTime?
+  otp              String?
+  payment_method   String?
+  status           OrderStatus @default(PENDING)
 
-  vendor_invoice_id         String?               @db.ObjectId
-  vendor_invoice            Invoice?              @relation("VendorInvoice", fields: [vendor_invoice_id], references: [id])
+  vendor_invoice_id String?  @db.ObjectId
+  vendor_invoice    Invoice? @relation("VendorInvoice", fields: [vendor_invoice_id], references: [id])
 
-  customer_invoice_id       String?               @db.ObjectId
-  customer_invoice          Invoice?              @relation("CustomerInvoice", fields: [customer_invoice_id], references: [id])
+  customer_invoice_id String?  @db.ObjectId
+  customer_invoice    Invoice? @relation("CustomerInvoice", fields: [customer_invoice_id], references: [id])
 
   // Payments v2
-  milestones                    OrderMilestone[]
+  milestones                   OrderMilestone[]
   // Frozen commission terms at bid-accept time so later DroneService edits don't rewrite history.
-  dg_commission_snapshot_type   DgChargeType?
-  dg_commission_snapshot_value  Float?
+  dg_commission_snapshot_type  DgChargeType?
+  dg_commission_snapshot_value Float?
 
-  createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime              @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-
-enum OrderStatus{
+enum OrderStatus {
   PENDING
   COMPLETED
 }
-
 
 model InvoiceCounter {
   id   String @id @default(auto()) @map("_id") @db.ObjectId
@@ -510,22 +497,21 @@ model InvoiceCounter {
   @@unique([year])
 }
 
-
 model Invoice {
-  id                        String                @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  seed                      String
-  latest                    Int
-  type                      InvoiceType
-  
-  vendor_Invoice             String
-  customer_Invoice           String
+  seed   String
+  latest Int
+  type   InvoiceType
 
-  vendor_orders             Order[]               @relation("VendorInvoice")
-  customer_orders           Order[]               @relation("CustomerInvoice")          
+  vendor_Invoice   String
+  customer_Invoice String
 
-  createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime              @updatedAt
+  vendor_orders   Order[] @relation("VendorInvoice")
+  customer_orders Order[] @relation("CustomerInvoice")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum InvoiceType {
@@ -533,51 +519,46 @@ enum InvoiceType {
   CUSTOMER
 }
 
+model Faq {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
+  question String
+  answer   String
 
-model Faq{
-  id                    String                  @id @default(auto()) @map("_id") @db.ObjectId
+  priorty  Int
+  isActive Boolean @default(true)
 
-  question              String
-  answer                String
+  type String
 
-  priorty               Int
-  isActive              Boolean                 @default(true)
-
-  type                  String            
-
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([priorty, type])
 }
 
+model RequestCallback {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-model RequestCallback{
-  id                    String                  @id @default(auto()) @map("_id") @db.ObjectId
+  name    String?
+  email   String?
+  phone   String?
+  message String?
 
-  name                  String?
-  email                 String?
-  phone                 String?
-  message               String?
-
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
+model Seo_Meta {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-model Seo_Meta{
-  id                    String        @id @default(auto()) @map("_id") @db.ObjectId
+  pageName        String  @unique
+  metaTitle       String?
+  metaDescription String?
+  metaKeyword     String?
 
-  pageName              String        @unique
-  metaTitle             String?
-  metaDescription       String?
-  metaKeyword           String?
-
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
-
 
 // =====================================================================
 // Payments v2 — schema only (PR #1). No behaviour change yet.
@@ -599,60 +580,60 @@ enum MilestoneStatus {
 }
 
 model OrderMilestone {
-  id                  String            @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  orderId             String            @db.ObjectId
-  order               Order             @relation(fields: [orderId], references: [id])
+  orderId String @db.ObjectId
+  order   Order  @relation(fields: [orderId], references: [id])
 
-  seq                 Int
-  title               String
-  description         String?
+  seq         Int
+  title       String
+  description String?
 
-  vendor_amount       Float
-  commission_amount   Float
-  gst_amount          Float
-  customer_amount     Float
+  vendor_amount     Float
+  commission_amount Float
+  gst_amount        Float
+  customer_amount   Float
 
-  status              MilestoneStatus   @default(PENDING)
+  status MilestoneStatus @default(PENDING)
 
-  otp                 String?
-  otp_issued_at       DateTime?
-  otp_redeemed_at     DateTime?
+  otp             String?
+  otp_issued_at   DateTime?
+  otp_redeemed_at DateTime?
 
-  razorpay_order_id     String?
+  razorpay_order_id    String?
   // Razorpay Route transfer created on_hold at payment time; released on COMPLETED.
-  razorpay_transfer_id  String?
-  payout_id             String?         @db.ObjectId
-  payout                VendorPayout?   @relation(fields: [payout_id], references: [id])
+  razorpay_transfer_id String?
+  payout_id            String?       @db.ObjectId
+  payout               VendorPayout? @relation(fields: [payout_id], references: [id])
 
-  disputed_reason     String?
-  refund_note         String?
+  disputed_reason String?
+  refund_note     String?
 
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([orderId, seq])
 }
 
 model RazorpayOrder {
-  id                  String            @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  razorpay_order_id   String            @unique
-  orderId             String?           @db.ObjectId
-  milestoneId         String?           @db.ObjectId
+  razorpay_order_id String  @unique
+  orderId           String? @db.ObjectId
+  milestoneId       String? @db.ObjectId
 
-  amount              Int
-  currency            String            @default("INR")
-  receipt             String?
-  status              String
+  amount   Int
+  currency String  @default("INR")
+  receipt  String?
+  status   String
 
   razorpay_payment_id String?
   razorpay_signature  String?
   captured_at         DateTime?
   raw                 Json?
 
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([orderId])
   @@index([milestoneId])
@@ -668,24 +649,24 @@ enum VendorPayoutStatus {
 }
 
 model VendorPayout {
-  id                      String              @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  vendorId                String              @db.ObjectId
-  vendor                  Vendor              @relation(fields: [vendorId], references: [id])
+  vendorId String @db.ObjectId
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
 
-  amount                  Int
-  currency                String              @default("INR")
-  status                  VendorPayoutStatus  @default(QUEUED)
+  amount   Int
+  currency String             @default("INR")
+  status   VendorPayoutStatus @default(QUEUED)
 
   // Provider-neutral payout reference (Razorpay Route transfer, manual NEFT ref, etc.).
-  provider_payout_id      String?             @unique
-  provider_reference_id   String?
-  failure_reason          String?
+  provider_payout_id    String? @unique
+  provider_reference_id String?
+  failure_reason        String?
 
-  milestones              OrderMilestone[]
+  milestones OrderMilestone[]
 
-  createdAt               DateTime            @default(now())
-  updatedAt               DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([vendorId])
   @@index([status])
@@ -704,28 +685,27 @@ enum RouteAccountStatus {
 }
 
 model VendorPayoutAccount {
-  id                    String              @id @default(auto()) @map("_id") @db.ObjectId
-  vendorId              String              @unique @db.ObjectId
-  vendor                Vendor              @relation(fields: [vendorId], references: [id])
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  vendorId String @unique @db.ObjectId
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
 
-  razorpay_account_id   String?             @unique
-  status                RouteAccountStatus  @default(CREATED)
-  activated_at          DateTime?
+  razorpay_account_id String?            @unique
+  status              RouteAccountStatus @default(CREATED)
+  activated_at        DateTime?
 
-  bank_account_last4    String?
-  bank_ifsc             String?
-  bank_account_holder   String?
+  bank_account_last4  String?
+  bank_ifsc           String?
+  bank_account_holder String?
 
-  last_synced_at        DateTime?
-  last_sync_error       String?
+  last_synced_at  DateTime?
+  last_sync_error String?
 
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-
 model RazorpayWebhookEvent {
-  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
   razorpay_event_id String    @unique
   event             String
@@ -738,3 +718,424 @@ model RazorpayWebhookEvent {
 
   @@index([event, processed])
 }
+
+// ============================ BEGIN APPEND ===========================
+
+// ---------------------------------------------------------------------
+// 1. ImageryCeilingRate — admin-managed pricing table (FRD §9.3)
+// ---------------------------------------------------------------------
+// Governs the ceiling INR rate per km² for every (sensor_class,
+// resolution_tier, gsd_tier, season) combination. Soft-deleted via
+// `active` flag so historical quotes remain auditable.
+//
+// Uniqueness: only ONE active row per combination at a time. We
+// enforce this in the service layer because MongoDB partial unique
+// indexes via Prisma require a `db push` workaround — see
+// `mongo-indexes.md` for the exact partial-index command.
+
+model ImageryCeilingRate {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  sensorClass    SensorClass
+  resolutionTier ResolutionTier
+  gsdTier        GsdTier
+  season         Season
+
+  // Rate stored in PAISE per km² (1 INR = 100 paise) — FRD §9.1
+  rateInrPerKm2 Int
+
+  effectiveFrom DateTime
+  effectiveTo   DateTime? // null = indefinite
+  active        Boolean   @default(true)
+
+  createdAt   DateTime @default(now())
+  createdById String   @db.ObjectId // FK to User.id (admin)
+  updatedAt   DateTime @updatedAt
+  updatedById String?  @db.ObjectId
+
+  @@index([sensorClass, resolutionTier, gsdTier, season, active])
+  @@map("imagery_ceiling_rates")
+}
+
+// ---------------------------------------------------------------------
+// 2. DataProcurementRequest — the parent record (FRD §9.4)
+// ---------------------------------------------------------------------
+// One request per vendor's "intent to sell". A request may yield zero or
+// one quote, and zero-to-three submission attempts. The `state` field is
+// the canonical state machine — see §9.10 of the FRD.
+//
+// `boundaryGeom` is a GeoJSON Polygon: { type: "Polygon",
+// coordinates: [ [ [lng,lat], ... ] ] }. MongoDB will index this with a
+// 2dsphere index (added via runCommandRaw migration).
+
+model DataProcurementRequest {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  requestUid String @unique @default(uuid()) // vendor-facing opaque ID
+
+  vendorId String @db.ObjectId
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+
+  // GeoJSON Polygon. Indexed via 2dsphere migration script.
+  boundaryGeom Json
+  areaKm2      Float
+
+  sensorClass         SensorClass
+  sensorModel         String? // "DJI Mavic 3M"
+  captureDate         DateTime
+  claimedGsdCm        Float
+  positionalAccuracyM Float
+  crsCode             String // "EPSG:32643", "EPSG:4326", etc.
+  seasonTag           Season // computed from captureDate
+  processingLevel     ProcessingLevel
+  weatherNotes        String?
+
+  state RequestState @default(DRAFT)
+
+  // Coverage check outcome — full audit payload (FRD AC-F03-03)
+  coverageCheckResult Json?
+
+  // Quote fields (populated when state >= QUOTED)
+  quoteAmountInr      Int? // gross, in paise
+  ceilingRateId       String?      @db.ObjectId // which rate row was used
+  qualityEstimate     Float?
+  qualityTierEstimate QualityTier? // S/A/B/C estimate at quote
+  discountPctEstimate Float?
+  quoteIssuedAt       DateTime?
+  quoteExpiresAt      DateTime? // 72h after issuance (FRD AC-F04-04)
+  quoteAcceptedAt     DateTime?
+  quoteDeclineReason  String?
+
+  // Retry tracking — max 3 attempts (FRD §8.12)
+  attemptsCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  submissions DataSubmission[]
+  payouts     Payout[]
+
+  @@index([vendorId, state])
+  @@index([state])
+  @@index([createdAt])
+  @@map("data_procurement_requests")
+}
+
+// ---------------------------------------------------------------------
+// 3. DataSubmission — one record per upload attempt (FRD §9.5)
+// ---------------------------------------------------------------------
+// A single request can have up to 3 submissions (initial + 2 retries).
+// Each submission has exactly one quality_inspection record once
+// inspection completes.
+
+model DataSubmission {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  requestId String                 @db.ObjectId
+  request   DataProcurementRequest @relation(fields: [requestId], references: [id])
+
+  attemptNumber Int // 1, 2, or 3
+
+  uploadMode  UploadMode // BROWSER | SERVER_FETCH
+  sourceUrls  String[] // populated for SERVER_FETCH only
+  storagePath String // OCI prefix for this attempt's bytes
+
+  totalBytes     BigInt? // BigInt because >2GB is common
+  fileCount      Int?
+  sha256Manifest String? // SHA-256 of concatenated per-file checksums
+
+  uploadStartedAt   DateTime  @default(now())
+  uploadCompletedAt DateTime?
+
+  inspectionState  InspectionState   @default(PENDING)
+  rejectionReasons RejectionReason[] // empty unless REJECTED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inspection QualityInspection?
+
+  @@unique([requestId, attemptNumber])
+  @@index([requestId])
+  @@index([inspectionState])
+  @@map("data_submissions")
+}
+
+// ---------------------------------------------------------------------
+// 4. QualityInspection — Stage 1 + Stage 2 results (FRD §9.6)
+// ---------------------------------------------------------------------
+// Kept as a separate model rather than columns on DataSubmission so we
+// can re-inspect (e.g. after a model upgrade) without overwriting the
+// original verdict. `stage1Metrics` is a JSON object containing every
+// individual CV check result; `stage2Rationale` is the verbatim VLM
+// response (FRD AC-F09-03 — no silent summarisation).
+
+model QualityInspection {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  submissionId String         @unique @db.ObjectId
+  submission   DataSubmission @relation(fields: [submissionId], references: [id])
+
+  // Stage 1: classical CV
+  stage1Score       Float?
+  stage1Metrics     Json? // { noDataPct, gsdDelta, blurVar, ... per check }
+  stage1CompletedAt DateTime?
+
+  // Stage 2: VLM
+  stage2Score       Float?
+  stage2Rationale   String? // verbatim Claude response
+  stage2RawResponse Json? // full structured rubric output
+  stage2CompletedAt DateTime?
+
+  // Composite + decision
+  compositeScore   Float?
+  tier             QualityTier? // S | A | B | C | FAIL
+  finalDiscountPct Float?
+
+  // Reproducibility
+  inspectorVersion String // e.g. "stage1-v1.2 | stage2-claude-3-7-sonnet"
+  previewTilePaths String[] // OCI paths of the tiles sent to VLM
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@map("quality_inspections")
+}
+
+// ---------------------------------------------------------------------
+// 5. ImageryInventory — accepted imagery catalog (FRD §9.7)
+// ---------------------------------------------------------------------
+// Source-of-truth for the coverage check on subsequent submissions.
+// `extentGeom` carries a GeoJSON Polygon and is indexed via 2dsphere.
+
+model ImageryInventory {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  submissionId String @db.ObjectId // provenance
+  vendorId     String @db.ObjectId // original vendor
+
+  extentGeom  Json // GeoJSON Polygon
+  sensorClass SensorClass
+  gsdCm       Float
+  seasonTag   Season
+  captureDate DateTime
+
+  storageUri   String // canonical inventory bucket URI
+  tileIndexUri String? // pre-generated tile index, if any
+
+  rights        InventoryRights
+  licenceExpiry DateTime? // for TERM_LICENCE only
+
+  acquisitionCostInr Int // gross paise — for accounting
+
+  createdAt DateTime @default(now())
+
+  @@index([sensorClass, seasonTag])
+  @@index([captureDate])
+  @@map("imagery_inventory")
+}
+
+// ---------------------------------------------------------------------
+// 6. Payout — outbound payment ledger (FRD §9.8)
+// ---------------------------------------------------------------------
+// Reconciled against RazorpayX. Idempotency key is requestUid + "-" +
+// attemptNumber, enforced in the service layer.
+
+model Payout {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  requestId String                 @db.ObjectId
+  request   DataProcurementRequest @relation(fields: [requestId], references: [id])
+
+  vendorId String @db.ObjectId
+
+  grossAmountInr Int // paise
+  tdsRateBps     Int // basis points: 200 = 2%, 2000 = 20%
+  tdsAmountInr   Int // paise withheld
+  netAmountInr   Int // paise paid
+
+  rail        PayoutRail // UPI | IMPS | NEFT
+  destination String // VPA or masked account number
+
+  razorpayxPayoutId String? @unique
+  utr               String? // bank UTR after settlement
+
+  state         PayoutState @default(QUEUED)
+  failureReason String? // populated only on FAILED
+
+  initiatedAt DateTime  @default(now())
+  settledAt   DateTime?
+
+  @@index([requestId])
+  @@index([vendorId])
+  @@index([state])
+  @@map("payouts")
+}
+
+// ---------------------------------------------------------------------
+// 7. AuditLog — append-only immutable audit trail (FRD §9.9)
+// ---------------------------------------------------------------------
+// MongoDB has no triggers, so immutability is enforced in the service
+// layer: only an `auditLog.create` is exposed; update/delete are
+// disallowed by repository design. We additionally rely on a regularly-
+// scheduled checksum-rollup job for tamper detection (covered in the
+// observability section of the implementation guide).
+
+model AuditLog {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  eventUid String @unique @default(uuid())
+
+  actorType ActorType // VENDOR | ADMIN | FINANCE | SYSTEM
+  actorId   String?   @db.ObjectId // null when actorType = SYSTEM
+
+  eventType  String // "REQUEST_CREATED", "QUOTE_ISSUED", ...
+  entityType String // "data_procurement_request", "payout", ...
+  entityId   String @db.ObjectId
+
+  payloadBefore Json?
+  payloadAfter  Json?
+  metadata      Json? // { ip, userAgent, requestId, ... }
+
+  createdAt DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorType, actorId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// =====================================================================
+// ENUMS
+// =====================================================================
+//
+// All enums named in the FRD are defined here. Strings used in the FRD
+// (e.g. "BROWSER", "SERVER_FETCH") are kept verbatim so backend logs
+// and API payloads match document terminology exactly.
+
+// ----- Sensor & data dimensions (FRD §6 glossary, §8.3) ----------------
+
+enum SensorClass {
+  RGB
+  MSI
+  THERMAL
+  HYPERSPECTRAL
+  SAR
+  LIDAR // accepted in metadata but rejected at quote in Phase 1 (FRD O-04)
+}
+
+enum ResolutionTier {
+  ULTRA_HIGH // GSD < 2 cm                     (FRD Appendix C.1)
+  HIGH // GSD 2–5 cm
+  MEDIUM // GSD 5–15 cm
+  STANDARD // GSD > 15 cm
+}
+
+enum GsdTier {
+  SURVEY_GRADE // RMSE < 10 cm             (FRD Appendix C.2)
+  MAPPING_GRADE // RMSE 10–50 cm
+  INSPECTION_GRADE // RMSE 50 cm – 2 m
+  RECONNAISSANCE // RMSE > 2 m
+}
+
+enum Season {
+  WINTER // Dec–Feb                       (FRD §8.3 metadata)
+  SUMMER // Mar–May
+  MONSOON // Jun–Sep
+  POST_MONSOON // Oct–Nov
+}
+
+enum ProcessingLevel {
+  RAW
+  CORRECTED // radiometrically corrected
+  ORTHOMOSAIC
+}
+
+// ----- Request lifecycle (FRD §9.10 state machine) ---------------------
+
+enum RequestState {
+  DRAFT // boundary uploaded, not yet quoted
+  QUOTED // quote issued, awaiting vendor decision
+  ACCEPTED_QUOTE // vendor accepted, slot not yet created
+  AWAITING_UPLOAD // ready to receive imagery
+  INSPECTING // inspection pipeline running
+  ACCEPTED // composite score ≥ 0.60, payout pending
+  REJECTED // final reject (after admin review or quote expiry)
+  PAID // payout settled
+  PAYOUT_FAILED // payout returned by RazorpayX, finance to resolve
+  ADMIN_REVIEW // 3 cumulative rejections
+  EXPIRED // quote not accepted within 72h
+  CANCELLED // vendor abandoned before quote
+}
+
+enum InspectionState {
+  PENDING
+  STAGE1_RUNNING
+  STAGE2_RUNNING
+  SCORED
+  ACCEPTED
+  REJECTED
+}
+
+enum QualityTier {
+  S // ≥ 0.90 — 0% discount
+  A // 0.80–0.89 — up to 10% discount
+  B // 0.70–0.79 — up to 25% discount
+  C // 0.60–0.69 — up to 40% discount
+  FAIL // < 0.60 — rejected
+}
+
+enum UploadMode {
+  BROWSER // multipart upload (FRD F-06)
+  SERVER_FETCH // backend fetches vendor URL (FRD F-07)
+}
+
+// ----- Rejection reason codes (FRD §11.5) ------------------------------
+
+enum RejectionReason {
+  NODATA_EXCESS // > 15% NoData pixels
+  GSD_MISMATCH // measured GSD > 20% worse than claimed
+  COVERAGE_GAP // > 10% boundary tiles uncovered
+  BLUR_EXCESSIVE // > 30% sampled tiles out of focus
+  BLACK_HOLES // large uniform regions
+  RADIOMETRIC_DEGENERATE // dynamic range < 20%
+  METADATA_INCOMPLETE // missing critical GeoTIFF tags
+  CRS_INVALID // CRS doesn't locate to claimed geography
+  VLM_SEMANTIC_REJECT // VLM rated below threshold on a rubric dim
+  COMPOSITE_BELOW_FLOOR // composite < 0.60, no single hard fail
+}
+
+// ----- Payout (FRD §9.8) ----------------------------------------------
+
+enum PayoutRail {
+  UPI
+  IMPS
+  NEFT
+}
+
+enum PayoutState {
+  QUEUED
+  PROCESSING
+  SUCCESS
+  FAILED
+  REVERSED
+}
+
+// ----- Inventory rights (FRD §9.7) -------------------------------------
+
+enum InventoryRights {
+  PERPETUAL_UNLIMITED
+  PERPETUAL_DRONEGENIE_ONLY
+  TERM_LICENCE
+}
+
+// ----- Audit log (FRD §9.9) -------------------------------------------
+
+enum ActorType {
+  VENDOR
+  ADMIN
+  FINANCE
+  SYSTEM
+}
+
+// ============================== END APPEND ===========================

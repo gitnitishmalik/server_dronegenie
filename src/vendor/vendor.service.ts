@@ -184,7 +184,7 @@ export class VendorService {
             email: dto.email,
             phone: dto.phone,
             password: passwordHash,
-            roles: 'VENDOR', // ensure this matches your enum values
+            roles: ['VENDOR'], // ensure this matches your enum values
             isActive: true,
             // admin created -> mark verified
             waitForOtp: false,

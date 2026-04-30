@@ -181,7 +181,7 @@ export class AuthService {
               name: u.name,
               email: u.email,
               phone: u.phone,
-              roles: 'CUSTOMER',
+              roles: ['CUSTOMER'],
               password: passwordHash,
               isActive: false,
               otp,
@@ -306,7 +306,7 @@ export class AuthService {
               name: u.name,
               email: u.email,
               phone: u.phone,
-              roles: 'VENDOR',
+              roles: ['VENDOR'],
               profile: null,
               password: passwordHash,
               isActive: v.isActive ?? false,
@@ -330,7 +330,7 @@ export class AuthService {
               name: u.name,
               phone: u.phone,
               email: u.email,
-              roles: 'VENDOR',
+              roles: { set: ['VENDOR'] },
               password: passwordHash,
               otp,
               expiriesIn,
@@ -459,7 +459,7 @@ export class AuthService {
           name: dto.name,
           email: dto.email,
           phone: dto.phone,
-          roles: dto.role,
+          roles: [dto.role],
           // isActive: false,
           password: password,
           otp,
@@ -472,9 +472,9 @@ export class AuthService {
 
     await sendSMS(dto.phone, otp)
 
-    const tokens = await this.getTokens(user.id, user.email, [
+    const tokens = await this.getTokens(user.id, user.email, 
       user.roles,
-    ]);
+    );
     await this.updateRtHash(user.id, tokens.refresh_token, true);
 
     return tokens;
@@ -506,7 +506,7 @@ export class AuthService {
       throw new UnauthorizedException(INVALID);
     }
 
-    if (dto.role && dto.role !== user.roles) {
+    if (dto.role && !user.roles.includes(dto.role)) {
       throw new UnauthorizedException(INVALID);
     }
 
@@ -515,7 +515,7 @@ export class AuthService {
       throw new UnauthorizedException(INVALID);
     }
 
-    const tokens = await this.getTokens(user.id, user.email, [user.roles]);
+    const tokens = await this.getTokens(user.id, user.email, user.roles);
     await this.updateRtHash(user.id, tokens.refresh_token, user.waitForOtp);
 
     return tokens;
@@ -545,7 +545,7 @@ export class AuthService {
     const rtMatches = await bcrypt.compare(rt, user.rtHash);
     if (!rtMatches) throw new ForbiddenException('Access Denied');
 
-    const tokens = await this.getTokens(user.id, user.email, [user.roles]);
+    const tokens = await this.getTokens(user.id, user.email, user.roles);
     await this.updateRtHash(user.id, tokens.refresh_token, user.waitForOtp);
 
     return tokens;
@@ -610,7 +610,7 @@ export class AuthService {
       },
     });
 
-    const tokens = await this.getTokens(user.id, user.email, [user.roles]);
+    const tokens = await this.getTokens(user.id, user.email, user.roles);
     await this.updateRtHash(user.id, tokens.refresh_token, user.waitForOtp);
 
     return tokens;
@@ -791,7 +791,7 @@ export class AuthService {
     const tokens = await this.getTokens(
       updatedUser.id,
       updatedUser.email,
-      [updatedUser.roles]
+      updatedUser.roles
     );
 
     await this.updateRtHash(
@@ -857,7 +857,7 @@ export class AuthService {
   async getTokens(
     userId: string,
     identification: string,
-    role: UserRole[] = [UserRole.VENDOR],
+    role: UserRole[],
   ): Promise<Tokens> {
     const jwtPayload: JwtPayload = {
       sub: userId,

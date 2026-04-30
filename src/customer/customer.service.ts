@@ -91,7 +91,7 @@ export class CustomerService {
           if (existingCustomer) throw new ConflictException('This user already has a customer profile.');
 
           // Update role to CUSTOMER (if needed)
-          await tx.user.update({ where: { id: user.id }, data: { roles: 'CUSTOMER' } });
+          await tx.user.update({ where: { id: user.id }, data: { roles: { set: ['CUSTOMER'] } } });
 
           userId = user.id;
         } else {
@@ -110,7 +110,7 @@ export class CustomerService {
               name: dto.name,
               email: dto.email,
               phone: dto.phone,
-              roles: 'CUSTOMER',
+              roles: ['CUSTOMER'],
               profile: null,
               password: hashedPassword,
               isActive: dto.isActive ?? false,
