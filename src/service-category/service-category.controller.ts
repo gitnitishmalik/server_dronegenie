@@ -55,10 +55,7 @@ export class ServiceCategoryController {
   @ApiResponse({ status: 201, description: 'Category created successfully' })
   @ApiResponse({ status: 409, description: 'Duplicate entry found' })
   @UseInterceptors(FileInterceptor('image', multerConfig))
-  async create(
-    @Body() createServiceCategoryDto: CreateServiceCategoryDto,
-    @UploadedFile() _file?: Express.Multer.File,
-  ) {
+  async create(@Body() createServiceCategoryDto: CreateServiceCategoryDto) {
     return this.serviceCategoryService.create(createServiceCategoryDto);
   }
 

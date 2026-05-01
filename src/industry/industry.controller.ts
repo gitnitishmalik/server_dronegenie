@@ -87,10 +87,7 @@ export class IndustryController {
   @Get('seo/:seo_name')
   @ApiOperation({ summary: 'Get Industry Services By Seo_name' })
   @ApiOperation({ summary: 'Industry Services Not Found' })
-  async getServicesByIndustrySeoname(
-    @Param('seo_name') seo_name: string,
-    @Query() _dto: PaginationDto,
-  ) {
+  async getServicesByIndustrySeoname(@Param('seo_name') seo_name: string) {
     return this.industryService.getServicesByIndustrySeoname(seo_name);
   }
 

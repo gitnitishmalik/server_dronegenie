@@ -56,9 +56,12 @@ export class VendorServiceService {
 
   @Pagination(['vendorId', 'serviceId'])
   async getAll(
-    _dto?: any,
-    _modelName?: string,
-    _queryOptions?: any,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    dto?: any,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    modelName?: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    queryOptions?: any,
   ): Promise<{
     total: number;
     page: number;
