@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CompanyType, UserRole } from '@prisma/client';
-import { Type, Transform } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
@@ -8,12 +8,9 @@ import {
   IsString,
   IsOptional,
   IsEnum,
-  ValidateNested,
   ArrayMinSize,
   IsArray,
   Length,
-  Matches,
-  IsNumber,
 } from 'class-validator';
 
 export class SignUpDto {
@@ -48,65 +45,97 @@ export class CustomerSignupDto {
   @ApiProperty() @IsString() @IsNotEmpty() phone: string;
 
   @ApiProperty({ enum: UserRole, default: UserRole.CUSTOMER })
-  @IsEnum(UserRole) role: UserRole = UserRole.CUSTOMER;
+  @IsEnum(UserRole)
+  role: UserRole = UserRole.CUSTOMER;
 
   @ApiProperty() @IsString() @IsNotEmpty() password: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() comp_name?: string;
-  @ApiProperty({ enum: CompanyType }) @IsEnum(CompanyType) comp_type: CompanyType;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  comp_name?: string;
+  @ApiProperty({ enum: CompanyType })
+  @IsEnum(CompanyType)
+  comp_type: CompanyType;
   @ApiProperty() @IsString() address: string;
   @ApiProperty() @IsString() website: string;
   @ApiProperty() @IsString() representative: string;
   @ApiProperty() @IsEmail() representative_email: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() representative_phone?: string;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  representative_phone?: string;
   @ApiProperty() @IsString() GST: string;
   @ApiProperty() @IsString() PAN: string;
   @ApiProperty() @IsBoolean() isTermsAccepted: boolean;
 }
 
 export class VendorSignupAllDto {
-  @ApiProperty() @IsString() @IsNotEmpty()
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
   name: string;
 
-  @ApiProperty() @IsEmail() @IsNotEmpty()
+  @ApiProperty()
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
 
-  @ApiProperty() @IsString() @IsNotEmpty()
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
   phone: string;
 
-  @ApiProperty({ required: false }) @IsOptional() @IsString() @Length(6, 72)
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @Length(6, 72)
   password: string;
 
-  @ApiProperty({ required: false }) @IsOptional() @IsString()
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   comp_name?: string;
 
-  @ApiProperty({ enum: CompanyType }) @IsEnum(CompanyType)
+  @ApiProperty({ enum: CompanyType })
+  @IsEnum(CompanyType)
   comp_type: CompanyType;
 
-  @ApiProperty() @IsString()
+  @ApiProperty()
+  @IsString()
   address: string;
 
-  @ApiProperty() @IsString()
+  @ApiProperty()
+  @IsString()
   website: string;
 
-  @ApiProperty() @IsString()
+  @ApiProperty()
+  @IsString()
   representative: string;
 
-  @ApiProperty() @IsEmail()
+  @ApiProperty()
+  @IsEmail()
   representative_email: string;
 
-  @ApiProperty({ required: false }) @IsOptional() @IsString()
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   representative_phone?: string;
 
-  @ApiProperty() @IsString()
+  @ApiProperty()
+  @IsString()
   GST: string;
 
-  @ApiProperty() @IsString()
+  @ApiProperty()
+  @IsString()
   PAN: string;
 
-  @ApiProperty() @IsBoolean()
+  @ApiProperty()
+  @IsBoolean()
   isTermsAccepted: boolean;
 
-  @ApiProperty({ required: false }) @IsOptional() @IsBoolean()
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
   isActive?: boolean; // default false until OTP verify
 
   @IsArray()

@@ -58,13 +58,13 @@ import { DataProcurementModule } from './data-procurement/data-procurement.modul
     ThrottlerModule.forRoot([
       {
         name: 'default',
-        ttl: 60_000,       // 1 minute window
-        limit: 180,        // 180 requests per IP per minute
+        ttl: 60_000, // 1 minute window
+        limit: 180, // 180 requests per IP per minute
       },
       {
         name: 'auth-strict',
-        ttl: 15 * 60_000,  // 15 minute window
-        limit: 10,         // 10 auth attempts per IP per 15 min
+        ttl: 15 * 60_000, // 15 minute window
+        limit: 10, // 10 auth attempts per IP per 15 min
         skipIf: (ctx) => {
           const req = ctx.switchToHttp().getRequest();
           const path: string = req?.url || req?.originalUrl || '';
@@ -73,8 +73,8 @@ import { DataProcurementModule } from './data-procurement/data-procurement.modul
       },
       {
         name: 'otp-strict',
-        ttl: 60 * 60_000,  // 1 hour window
-        limit: 20,         // 20 OTP verification attempts per IP per hour
+        ttl: 60 * 60_000, // 1 hour window
+        limit: 20, // 20 OTP verification attempts per IP per hour
         skipIf: (ctx) => {
           const req = ctx.switchToHttp().getRequest();
           const path: string = req?.url || req?.originalUrl || '';

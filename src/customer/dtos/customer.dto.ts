@@ -1,12 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { CompanyType, UserRole } from '@prisma/client';
+import {
+  IsBoolean,
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { CompanyType } from '@prisma/client';
 
 export class CreateCustomerDto {
   @ApiProperty() @IsString() @IsNotEmpty() name: string;
   @ApiProperty() @IsEmail() @IsNotEmpty() email: string;
   @ApiProperty() @IsString() @IsNotEmpty() phone: string;
-
 
   @ApiProperty() @IsString() @IsNotEmpty() password: string;
   @ApiProperty({ required: false })
@@ -57,10 +63,8 @@ export class CreateCustomerDto {
   isTermsAccepted: boolean;
 }
 
-
 export class UpdateCustomerProfileDto {
   @ApiProperty() @IsString() @IsOptional() name: string;
-
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -112,10 +116,10 @@ export class QueryFilterDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  month: string
+  month: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  year: string
+  year: string;
 }

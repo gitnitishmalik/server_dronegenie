@@ -1,20 +1,14 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
-  ParseFloatPipe,
-  HttpException,
   InternalServerErrorException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateDroneServiceDto } from './dtos';
-import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { generateSeoName } from 'src/common/utils/seo.util';
-import { error } from 'console';
 import { Prisma } from '@prisma/client';
-
 
 function getFriendlyUniqueMessage(target: unknown): string {
   // Prisma gives either an array of field names, or an index name string
@@ -35,13 +29,9 @@ function getFriendlyUniqueMessage(target: unknown): string {
   return 'A unique value already exists for this field.';
 }
 
-
 @Injectable()
 export class DroneServiceService {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) { }
-
+  constructor(private readonly prisma: PrismaService) {}
 
   private handleDuplicateError(target: unknown) {
     const message = getFriendlyUniqueMessage(target);
@@ -76,11 +66,14 @@ export class DroneServiceService {
           ...(imageUrl && { image: imageUrl }),
           ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
           ...(industryId ? { industry: { connect: { id: industryId } } } : {}),
-        }
+        },
       });
     } catch (e) {
       // Prisma unique constraint
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
         return this.handleDuplicateError(e.meta?.target);
       }
 
@@ -90,7 +83,7 @@ export class DroneServiceService {
         return this.handleDuplicateError(field);
       }
 
-      throw new InternalServerErrorException("Something went wrong");
+      throw new InternalServerErrorException('Something went wrong');
     }
   }
 
@@ -104,10 +97,10 @@ export class DroneServiceService {
             category: {
               select: {
                 id: true,
-                category_name: true
-              }
-            }
-          }
+                category_name: true,
+              },
+            },
+          },
         },
         // properties: true,
         industries: {
@@ -116,12 +109,12 @@ export class DroneServiceService {
             industry: {
               select: {
                 id: true,
-                industry_name: true
-              }
-            }
-          }
+                industry_name: true,
+              },
+            },
+          },
         },
-      }
+      },
     });
     if (!obj) throw new NotFoundException('Service not found');
     return obj;
@@ -169,35 +162,39 @@ export class DroneServiceService {
     }));
   }
 
-
   async update(
     id: string,
     dto: Partial<CreateDroneServiceDto>,
     file?: Express.Multer.File,
   ) {
     try {
-      const existing = await this.prisma.droneService.findUnique({ where: { id } });
+      const existing = await this.prisma.droneService.findUnique({
+        where: { id },
+      });
       if (!existing) throw new NotFoundException('Service not found');
 
       let imageUrl: string | undefined;
       if (file) {
-        imageUrl = file.filename
+        imageUrl = file.filename;
       }
 
-      const { categoryId, industryId, service_name, metaTitle, metaDescription, metaKeyword, priorty, ...restDto } = dto;
+      const {
+        service_name,
+        metaTitle,
+        metaDescription,
+        metaKeyword,
+        priorty,
+        ...restDto
+      } = dto;
 
       const finalServiceName = (service_name || existing.service_name)?.trim();
 
       // ✅ SEO fallback logic
-      const finalMetaTitle =
-        metaTitle?.trim() || finalServiceName;
+      const finalMetaTitle = metaTitle?.trim() || finalServiceName;
 
-      const finalMetaDescription =
-        metaDescription?.trim() || finalServiceName;
+      const finalMetaDescription = metaDescription?.trim() || finalServiceName;
 
-      const finalMetaKeyword =
-        metaKeyword?.trim() || finalServiceName;
-
+      const finalMetaKeyword = metaKeyword?.trim() || finalServiceName;
 
       return await this.prisma.droneService.update({
         where: { id },
@@ -228,7 +225,10 @@ export class DroneServiceService {
     } catch (e) {
       console.log(e);
 
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
         throw new BadRequestException(getFriendlyUniqueMessage(e.meta?.target));
       }
 
@@ -238,7 +238,7 @@ export class DroneServiceService {
         throw new BadRequestException(getFriendlyUniqueMessage(field));
       }
 
-      throw new InternalServerErrorException("Soemthing Went Wrong")
+      throw new InternalServerErrorException('Soemthing Went Wrong');
     }
   }
 
@@ -247,25 +247,29 @@ export class DroneServiceService {
     if (!obj) throw new NotFoundException('Service not found');
 
     return await this.prisma.$transaction(async (prisma) => {
-      await prisma.droneServiceCategory.deleteMany({ where: { serviceId: id } });
-      await prisma.droneServiceIndustry.deleteMany({ where: { serviceId: id } });
+      await prisma.droneServiceCategory.deleteMany({
+        where: { serviceId: id },
+      });
+      await prisma.droneServiceIndustry.deleteMany({
+        where: { serviceId: id },
+      });
       return prisma.droneService.delete({ where: { id } });
-    });;
+    });
   }
 
   async getAllServices() {
     const services = await this.prisma.droneService.findMany({
       select: {
         id: true,
-        service_name: true
-      }
+        service_name: true,
+      },
     });
 
     if (!services || services.length === 0) {
-      throw new NotFoundException("Services Not Found");
+      throw new NotFoundException('Services Not Found');
     }
 
-    return services
+    return services;
   }
 
   // @Pagination(['service_name', 'uav_type', 'unit', 'rate_on_qty', 'description', 'gst', 'feature_needed', 'category.category_name'])
@@ -357,10 +361,10 @@ export class DroneServiceService {
                 category: {
                   select: {
                     id: true,
-                    category_name: true
-                  }
-                }
-              }
+                    category_name: true,
+                  },
+                },
+              },
             },
             industries: {
               select: {
@@ -368,12 +372,12 @@ export class DroneServiceService {
                 industry: {
                   select: {
                     id: true,
-                    industry_name: true
-                  }
-                }
-              }
-            }
-          }
+                    industry_name: true,
+                  },
+                },
+              },
+            },
+          },
         }),
         this.prisma.droneService.count({ where }),
       ]);
@@ -383,13 +387,12 @@ export class DroneServiceService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        data
+        data,
       };
     } catch (error) {
       throw error;
     }
   }
-
 
   async getServicesBySeoName(seoName: string) {
     // 1️⃣ Try Category first
@@ -471,18 +474,11 @@ export class DroneServiceService {
     throw new NotFoundException('No category or industry found');
   }
 
-
-  private mapToUnifiedResponse(
-    source: any,
-    type: 'category' | 'industry',
-  ) {
+  private mapToUnifiedResponse(source: any, type: 'category' | 'industry') {
     return {
       id: source.id,
 
-      name:
-        type === 'category'
-          ? source.category_name
-          : source.industry_name,
+      name: type === 'category' ? source.category_name : source.industry_name,
 
       seo_name:
         type === 'category'
@@ -490,48 +486,47 @@ export class DroneServiceService {
           : source.industry_seo_name,
 
       type, // optional but useful
-      description: type === 'category'
-        ? source.description
-        : source.description,
+      description:
+        type === 'category' ? source.description : source.description,
 
       media: source.media || [],
 
-      services: source.droneServices?.map(ds => ({
-        id: ds.id,
-        serviceId: ds.service.id,
-        service_name: ds.service.service_name,
-        service_seo_name: ds.service.service_seo_name,
-        description: ds.service.description,
-        unit: ds.service.unit,
-        uav_type: ds.service.uav_type,
-        rate_on_qty: ds.service.rate_on_qty,
-        gst: ds.service.gst,
-        dgCharges: ds.service.dgCharges,
-        feature_needed: ds.service.feature_needed,
-        image: ds.service.image,
-      })) || [],
+      services:
+        source.droneServices?.map((ds) => ({
+          id: ds.id,
+          serviceId: ds.service.id,
+          service_name: ds.service.service_name,
+          service_seo_name: ds.service.service_seo_name,
+          description: ds.service.description,
+          unit: ds.service.unit,
+          uav_type: ds.service.uav_type,
+          rate_on_qty: ds.service.rate_on_qty,
+          gst: ds.service.gst,
+          dgCharges: ds.service.dgCharges,
+          feature_needed: ds.service.feature_needed,
+          image: ds.service.image,
+        })) || [],
 
-      wcuProperties: source.wcuProperties?.map(wcu => ({
-        id: wcu.id,
-        property:
-          type === 'category'
-            ? wcu.property.propHeading
-            : wcu.property.propHeading,
-        description:
-          type === 'category'
-            ? wcu.property.propDescription
-            : wcu.property.propDescription,
-        image:
-          type === 'category'
-            ? wcu.property.propImage
-            : wcu.property.propImage,
-        priorty:
-          type === 'category'
-            ? wcu.property.propPriorty
-            : wcu.property.propPriorty,
-      })) || [],
+      wcuProperties:
+        source.wcuProperties?.map((wcu) => ({
+          id: wcu.id,
+          property:
+            type === 'category'
+              ? wcu.property.propHeading
+              : wcu.property.propHeading,
+          description:
+            type === 'category'
+              ? wcu.property.propDescription
+              : wcu.property.propDescription,
+          image:
+            type === 'category'
+              ? wcu.property.propImage
+              : wcu.property.propImage,
+          priorty:
+            type === 'category'
+              ? wcu.property.propPriorty
+              : wcu.property.propPriorty,
+        })) || [],
     };
   }
-
-
 }

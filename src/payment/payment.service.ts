@@ -11,10 +11,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
-import Razorpay = require('razorpay');
+import Razorpay from 'razorpay';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { sendSMS } from 'src/common/utils/send-sms.util';
-import { MilestoneStatus, RouteAccountStatus, VendorPayoutStatus } from '@prisma/client';
+import {
+  MilestoneStatus,
+  RouteAccountStatus,
+  VendorPayoutStatus,
+} from '@prisma/client';
 import { CreateOrderDto, VerifyPaymentDto } from './dtos/payment.dto';
 
 @Injectable()
@@ -85,9 +89,7 @@ export class PaymentService implements OnModuleInit {
       this.logger.error(
         `Razorpay order.create failed: ${err?.error?.description || err?.message}`,
       );
-      throw new InternalServerErrorException(
-        'Failed to create Razorpay order',
-      );
+      throw new InternalServerErrorException('Failed to create Razorpay order');
     }
   }
 
@@ -106,7 +108,6 @@ export class PaymentService implements OnModuleInit {
     return timingSafeEqual(a, b);
   }
 
-
   // Fetch a milestone + its order + the customer's userId in one hop so we
   // can authorize ownership without an extra round-trip in each endpoint.
   private async loadMilestoneForCustomer(milestoneId: string, userId: string) {
@@ -117,7 +118,9 @@ export class PaymentService implements OnModuleInit {
           select: {
             id: true,
             customerId: true,
-            customer: { select: { userId: true, user: { select: { phone: true } } } },
+            customer: {
+              select: { userId: true, user: { select: { phone: true } } },
+            },
           },
         },
       },
@@ -128,7 +131,6 @@ export class PaymentService implements OnModuleInit {
     }
     return milestone;
   }
-
 
   // Customer pays for ONE milestone. Strict sequence: every milestone
   // before this one must already be COMPLETED (redeemed OTP — which ships
@@ -171,7 +173,11 @@ export class PaymentService implements OnModuleInit {
           where: { vendorId: orderRow.vendorId },
         })
       : null;
-    if (!payoutAccount || payoutAccount.status !== RouteAccountStatus.ACTIVATED || !payoutAccount.razorpay_account_id) {
+    if (
+      !payoutAccount ||
+      payoutAccount.status !== RouteAccountStatus.ACTIVATED ||
+      !payoutAccount.razorpay_account_id
+    ) {
       throw new ConflictException(
         'Vendor has not completed payout setup yet. Payment cannot proceed until the vendor activates their Razorpay Route account.',
       );
@@ -255,7 +261,6 @@ export class PaymentService implements OnModuleInit {
     };
   }
 
-
   // Customer finishes Razorpay Checkout and POSTs the resulting
   // (order_id, payment_id, signature). We HMAC-verify, mark the milestone
   // OTP_ISSUED, generate a 6-digit OTP, and SMS it to the customer.
@@ -298,12 +303,18 @@ export class PaymentService implements OnModuleInit {
     // succeeds — admin can backfill the transfer_id later.
     let transferId: string | null = null;
     try {
-      const transfers = await (this.client as any).orders.fetchTransferOrder(dto.razorpay_order_id);
-      const t = Array.isArray(transfers?.items) ? transfers.items[0] : transfers?.[0];
+      const transfers = await (this.client as any).orders.fetchTransferOrder(
+        dto.razorpay_order_id,
+      );
+      const t = Array.isArray(transfers?.items)
+        ? transfers.items[0]
+        : transfers?.[0];
       if (t?.id) transferId = t.id;
     } catch {
       try {
-        const order: any = await this.client.orders.fetch(dto.razorpay_order_id);
+        const order: any = await this.client.orders.fetch(
+          dto.razorpay_order_id,
+        );
         const t = Array.isArray(order?.transfers) ? order.transfers[0] : null;
         if (t?.id) transferId = t.id;
       } catch (err: any) {
@@ -357,7 +368,6 @@ export class PaymentService implements OnModuleInit {
     };
   }
 
-
   // Called from OrderService.redeemMilestoneOtp once the milestone transitions
   // to COMPLETED. Releases the on_hold Route transfer so Razorpay settles funds
   // to the vendor's linked account in their next settlement cycle, and writes
@@ -366,23 +376,33 @@ export class PaymentService implements OnModuleInit {
   // Deliberately tolerant: a release failure does NOT block the completion —
   // admin can retry from the payout list once PR #5+ ships that UI. We still
   // persist a FAILED VendorPayout row so the situation is visible.
-  async releaseMilestoneTransfer(milestoneId: string): Promise<{ released: boolean; payoutId: string | null; reason?: string }> {
+  async releaseMilestoneTransfer(
+    milestoneId: string,
+  ): Promise<{ released: boolean; payoutId: string | null; reason?: string }> {
     const milestone = await this.prisma.orderMilestone.findUnique({
       where: { id: milestoneId },
       include: { order: { select: { vendorId: true } } },
     });
-    if (!milestone) return { released: false, payoutId: null, reason: 'milestone not found' };
+    if (!milestone)
+      return { released: false, payoutId: null, reason: 'milestone not found' };
 
     if (!milestone.razorpay_transfer_id) {
       // No transfer was recorded at payment time (either V1 flow or fetch-transfer lookup failed).
       // Nothing to release; leave for admin reconciliation.
-      return { released: false, payoutId: null, reason: 'no razorpay_transfer_id on milestone' };
+      return {
+        released: false,
+        payoutId: null,
+        reason: 'no razorpay_transfer_id on milestone',
+      };
     }
 
     const amountPaise = Math.round(milestone.vendor_amount * 100);
 
     try {
-      await (this.client as any).transfers.edit(milestone.razorpay_transfer_id, { on_hold: false });
+      await (this.client as any).transfers.edit(
+        milestone.razorpay_transfer_id,
+        { on_hold: false },
+      );
     } catch (err: any) {
       const desc = err?.error?.description || err?.message;
       this.logger.error(
@@ -403,7 +423,11 @@ export class PaymentService implements OnModuleInit {
         where: { id: milestone.id },
         data: { payout_id: failedPayout.id },
       });
-      return { released: false, payoutId: failedPayout.id, reason: String(desc) };
+      return {
+        released: false,
+        payoutId: failedPayout.id,
+        reason: String(desc),
+      };
     }
 
     const payout = await this.prisma.vendorPayout.create({
@@ -424,7 +448,6 @@ export class PaymentService implements OnModuleInit {
     return { released: true, payoutId: payout.id };
   }
 
-
   // Called from OrderService.resolveDispute when admin rules in favour of the
   // customer. Best-effort: (1) reverse the Route on_hold transfer so the
   // vendor's share returns to DG's main balance; (2) refund the customer's
@@ -444,21 +467,32 @@ export class PaymentService implements OnModuleInit {
       include: { order: { select: { vendorId: true } } },
     });
     if (!milestone) {
-      return { transferReversed: false, paymentRefunded: false, refundId: null, warnings: ['milestone not found'] };
+      return {
+        transferReversed: false,
+        paymentRefunded: false,
+        refundId: null,
+        warnings: ['milestone not found'],
+      };
     }
 
     let transferReversed = false;
     if (milestone.razorpay_transfer_id) {
       try {
-        await (this.client as any).transfers.reverse(milestone.razorpay_transfer_id);
+        await (this.client as any).transfers.reverse(
+          milestone.razorpay_transfer_id,
+        );
         transferReversed = true;
       } catch (err: any) {
         const desc = err?.error?.description || err?.message;
         warnings.push(`transfer reverse failed: ${desc}`);
-        this.logger.error(`transfers.reverse failed for milestone=${milestone.id}: ${desc}`);
+        this.logger.error(
+          `transfers.reverse failed for milestone=${milestone.id}: ${desc}`,
+        );
       }
     } else {
-      warnings.push('no razorpay_transfer_id on milestone — transfer reverse skipped');
+      warnings.push(
+        'no razorpay_transfer_id on milestone — transfer reverse skipped',
+      );
     }
 
     // Refund the customer. We look up the Razorpay payment ID via the
@@ -475,17 +509,22 @@ export class PaymentService implements OnModuleInit {
     if (rzpOrder?.razorpay_payment_id) {
       try {
         const amountPaise = Math.round(milestone.customer_amount * 100);
-        const refund: any = await (this.client as any).payments.refund(rzpOrder.razorpay_payment_id, {
-          amount: amountPaise,
-          speed: 'normal',
-          notes: { milestoneId: milestone.id, reason: 'dispute_refund' },
-        });
+        const refund: any = await (this.client as any).payments.refund(
+          rzpOrder.razorpay_payment_id,
+          {
+            amount: amountPaise,
+            speed: 'normal',
+            notes: { milestoneId: milestone.id, reason: 'dispute_refund' },
+          },
+        );
         refundId = refund?.id || null;
         paymentRefunded = true;
       } catch (err: any) {
         const desc = err?.error?.description || err?.message;
         warnings.push(`payment refund failed: ${desc}`);
-        this.logger.error(`payments.refund failed for milestone=${milestone.id}: ${desc}`);
+        this.logger.error(
+          `payments.refund failed for milestone=${milestone.id}: ${desc}`,
+        );
       }
     } else {
       warnings.push('no razorpay_payment_id on the audit row — refund skipped');
@@ -502,7 +541,9 @@ export class PaymentService implements OnModuleInit {
         status: VendorPayoutStatus.REVERSED,
         provider_payout_id: milestone.razorpay_transfer_id ?? null,
         provider_reference_id: refundId,
-        failure_reason: warnings.length ? warnings.join(' | ').slice(0, 500) : null,
+        failure_reason: warnings.length
+          ? warnings.join(' | ').slice(0, 500)
+          : null,
         milestones: { connect: [{ id: milestone.id }] },
       },
     });

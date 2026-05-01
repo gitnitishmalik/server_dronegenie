@@ -1,7 +1,11 @@
-import { BadRequestException, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  BadRequestException,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import * as basicAuth from 'express-basic-auth';
+import basicAuth from 'express-basic-auth';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import * as express from 'express';
@@ -22,7 +26,10 @@ const allowedOrigins = [
 async function bootstrap() {
   const isProd = process.env.ENV === 'PROD';
 
-  const port = process.env.PORT || (isProd ? process.env.PROD_PORT : process.env.DEV_PORT) || 4000;
+  const port =
+    process.env.PORT ||
+    (isProd ? process.env.PROD_PORT : process.env.DEV_PORT) ||
+    4000;
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // Needed for Razorpay webhook HMAC verification — we must hash the exact

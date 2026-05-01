@@ -2,17 +2,17 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  UnauthorizedException,
 } from '@nestjs/common';
-import { MilestoneStatus, RouteAccountStatus, VendorPayoutStatus } from '@prisma/client';
+import { RouteAccountStatus, VendorPayoutStatus } from '@prisma/client';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
-
 
 // Razorpay event type → normalised RouteAccountStatus. Account events carry
 // Razorpay's own status string on `payload.account.entity.status` (the exact
 // key varies by event; we fall back across plausible paths in the handler).
-function mapAccountStatus(rzpStatus: string | undefined): RouteAccountStatus | null {
+function mapAccountStatus(
+  rzpStatus: string | undefined,
+): RouteAccountStatus | null {
   switch ((rzpStatus || '').toLowerCase()) {
     case 'activated':
     case 'active':
@@ -32,17 +32,18 @@ function mapAccountStatus(rzpStatus: string | undefined): RouteAccountStatus | n
   }
 }
 
-
 @Injectable()
 export class RazorpayWebhookService {
   private readonly logger = new Logger(RazorpayWebhookService.name);
 
   constructor(private readonly prisma: PrismaService) {}
 
-
   // Verify the webhook is really from Razorpay. Compare HMAC-SHA256(secret, body)
   // with the x-razorpay-signature header using a constant-time compare.
-  verify(rawBody: Buffer | string | undefined, signatureHeader: string | undefined): boolean {
+  verify(
+    rawBody: Buffer | string | undefined,
+    signatureHeader: string | undefined,
+  ): boolean {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET || '';
     if (!secret) {
       // Explicit misconfiguration — return false so the endpoint 401s rather
@@ -52,7 +53,8 @@ export class RazorpayWebhookService {
     }
     if (!rawBody || !signatureHeader) return false;
 
-    const bodyBuf = typeof rawBody === 'string' ? Buffer.from(rawBody, 'utf8') : rawBody;
+    const bodyBuf =
+      typeof rawBody === 'string' ? Buffer.from(rawBody, 'utf8') : rawBody;
     const expected = createHmac('sha256', secret).update(bodyBuf).digest('hex');
     const a = Buffer.from(expected, 'utf8');
     const b = Buffer.from(signatureHeader, 'utf8');
@@ -60,16 +62,19 @@ export class RazorpayWebhookService {
     return timingSafeEqual(a, b);
   }
 
-
   // Persist + dispatch. Idempotency lives on the razorpay_event_id unique
   // index — a replay of the same event short-circuits at the upsert.
-  async process(event: any): Promise<{ processed: boolean; reason?: string; event_id?: string }> {
+  async process(
+    event: any,
+  ): Promise<{ processed: boolean; reason?: string; event_id?: string }> {
     const eventId: string | undefined = event?.id || event?.event_id;
     const eventName: string | undefined = event?.event;
     const signature = event?.__signature || '';
 
     if (!eventId || !eventName) {
-      throw new InternalServerErrorException('Razorpay event missing id or event');
+      throw new InternalServerErrorException(
+        'Razorpay event missing id or event',
+      );
     }
 
     // If we've processed this event_id before, bail early.
@@ -77,7 +82,11 @@ export class RazorpayWebhookService {
       where: { razorpay_event_id: eventId },
     });
     if (existing?.processed) {
-      return { processed: true, reason: 'already processed', event_id: eventId };
+      return {
+        processed: true,
+        reason: 'already processed',
+        event_id: eventId,
+      };
     }
 
     // Record receipt before dispatching — if the handler crashes, the row
@@ -114,7 +123,6 @@ export class RazorpayWebhookService {
     }
   }
 
-
   private async dispatch(eventName: string, event: any) {
     const p = event?.payload ?? {};
 
@@ -124,13 +132,21 @@ export class RazorpayWebhookService {
       case 'payment.failed': {
         const payment = p?.payment?.entity;
         if (!payment?.order_id) return;
-        const status = eventName === 'payment.captured' ? 'paid' : eventName === 'payment.failed' ? 'failed' : 'attempted';
+        const status =
+          eventName === 'payment.captured'
+            ? 'paid'
+            : eventName === 'payment.failed'
+              ? 'failed'
+              : 'attempted';
         await this.prisma.razorpayOrder.updateMany({
           where: { razorpay_order_id: payment.order_id },
           data: {
             status,
             razorpay_payment_id: payment.id ?? undefined,
-            captured_at: eventName === 'payment.captured' ? new Date((payment.created_at ?? 0) * 1000 || Date.now()) : undefined,
+            captured_at:
+              eventName === 'payment.captured'
+                ? new Date((payment.created_at ?? 0) * 1000 || Date.now())
+                : undefined,
           },
         });
         return;
@@ -142,7 +158,9 @@ export class RazorpayWebhookService {
         if (!refund?.payment_id) return;
         // We only log in the webhook event row — refund bookkeeping already
         // happened when admin clicked Resolve → Refund (VendorPayout REVERSED).
-        this.logger.log(`Refund ${refund.id} (${refund.status}) for payment ${refund.payment_id} — event recorded.`);
+        this.logger.log(
+          `Refund ${refund.id} (${refund.status}) for payment ${refund.payment_id} — event recorded.`,
+        );
         return;
       }
 
@@ -191,9 +209,11 @@ export class RazorpayWebhookService {
           where: { id: existing.id },
           data: {
             status: newStatus,
-            activated_at: newStatus === RouteAccountStatus.ACTIVATED && !existing.activated_at
-              ? new Date()
-              : existing.activated_at,
+            activated_at:
+              newStatus === RouteAccountStatus.ACTIVATED &&
+              !existing.activated_at
+                ? new Date()
+                : existing.activated_at,
             last_synced_at: new Date(),
             last_sync_error: null,
           },

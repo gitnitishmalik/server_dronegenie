@@ -1,4 +1,4 @@
-export function generateVendorHTMLTemplate(data: any, order: any): string {
+export function generateVendorHTMLTemplate(data: any): string {
   return `
     <!DOCTYPE html>
 <html lang="en">
@@ -65,16 +65,15 @@ export function generateVendorHTMLTemplate(data: any, order: any): string {
       </thead>
       <tbody>
         ${data.items?.map((item: any, idx: number) => {
-    return `<tr key=${idx} class="bg-gray-100 border-b">
+          return `<tr key=${idx} class="bg-gray-100 border-b">
                 <td class="py-2 px-3">
                 <p>${item.name}</p>
                 </td>
                 <td class="py-2 px-3">₹${item.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td class="py-2 px-3">₹${item.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
 
-                </tr>`
-  })
-    }
+                </tr>`;
+        })}
       </tbody>
     </table>
 

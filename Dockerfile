@@ -1,7 +1,7 @@
 # Dockerfile
 
 # ---- Base ----
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 WORKDIR /usr/src/app
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -22,4 +22,4 @@ COPY --from=build /usr/src/app/dist ./dist
 COPY --from=dependencies /usr/src/app/node_modules ./node_modules
 COPY --from=dependencies /usr/src/app/prisma ./prisma
 EXPOSE 3000
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]

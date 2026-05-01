@@ -9,7 +9,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { CompanyType, UserRole } from '@prisma/client';
+import { CompanyType } from '@prisma/client';
 
 export class CreateVendorDto {
   @ApiProperty() @IsString() @IsNotEmpty() name: string;
@@ -75,10 +75,8 @@ export class CreateVendorDto {
   serviceIds: string[];
 }
 
-
 export class VendorProfileDto {
   @ApiProperty() @IsString() @IsNotEmpty() name: string;
-
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -119,15 +117,14 @@ export class VendorProfileDto {
   PAN: string;
 }
 
-
 export class QueryFilterDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  month: string
+  month: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  year: string
+  year: string;
 }

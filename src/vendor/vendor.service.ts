@@ -4,26 +4,26 @@ import {
   ConflictException,
   BadRequestException,
   InternalServerErrorException,
-  ForbiddenException,
   HttpException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateVendorDto, QueryFilterDto, VendorProfileDto } from './dtos';
 import * as bcrypt from 'bcrypt';
-import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class VendorService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   // ---------- helpers ----------
   private isValidPAN(pan: string): boolean {
     return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
   }
   private isValidGST(gst: string): boolean {
-    return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gst);
+    return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+      gst,
+    );
   }
   private normalizePAN(pan: string): string {
     return pan.toUpperCase().trim();
@@ -33,10 +33,15 @@ export class VendorService {
   }
 
   private handleUniqueError(error: any) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       // Prisma sends meta.target like ['email'] or ['GST'] or index name
       const target = (error.meta && (error.meta as any).target) || '';
-      const targetStr = Array.isArray(target) ? target.join(',').toLowerCase() : String(target).toLowerCase();
+      const targetStr = Array.isArray(target)
+        ? target.join(',').toLowerCase()
+        : String(target).toLowerCase();
 
       if (targetStr.includes('email')) {
         throw new BadRequestException('Email already exists');
@@ -49,7 +54,9 @@ export class VendorService {
       } else if (targetStr.includes('representative_email')) {
         throw new BadRequestException('Representative email already exists');
       } else {
-        throw new BadRequestException('Duplicate value — one of the fields must be unique');
+        throw new BadRequestException(
+          'Duplicate value — one of the fields must be unique',
+        );
       }
     }
 
@@ -57,9 +64,8 @@ export class VendorService {
     throw error;
   }
 
-
   // ---------- create ----------
-  async createVendor(dto: CreateVendorDto, file?: Express.Multer.File) {
+  async createVendor(dto: CreateVendorDto) {
     try {
       // Basic validations for PAN/GST
       if (!dto.PAN) throw new BadRequestException('PAN is required');
@@ -68,11 +74,15 @@ export class VendorService {
       dto.PAN = this.normalizePAN(dto.PAN);
       dto.GST = this.normalizeGST(dto.GST);
 
-      if (!this.isValidPAN(dto.PAN)) throw new BadRequestException('Invalid PAN Number');
-      if (!this.isValidGST(dto.GST)) throw new BadRequestException('Invalid GST Number.');
+      if (!this.isValidPAN(dto.PAN))
+        throw new BadRequestException('Invalid PAN Number');
+      if (!this.isValidGST(dto.GST))
+        throw new BadRequestException('Invalid GST Number.');
 
       // serviceIds optional: normalize input if present
-      const serviceIds: string[] = Array.isArray((dto as any).serviceIds) ? (dto as any).serviceIds.filter(Boolean) : [];
+      const serviceIds: string[] = Array.isArray((dto as any).serviceIds)
+        ? (dto as any).serviceIds.filter(Boolean)
+        : [];
 
       // helper to determine verification state
       const isUserVerified = (user) => {
@@ -119,7 +129,9 @@ export class VendorService {
 
         // Now create or update vendor and optionally attach services (transaction)
         const vendor = await this.prisma.$transaction(async (tx) => {
-          const existingVendor = await tx.vendor.findUnique({ where: { userId: updatedUser.id } });
+          const existingVendor = await tx.vendor.findUnique({
+            where: { userId: updatedUser.id },
+          });
 
           const vendorData: any = {
             userId: updatedUser.id,
@@ -141,12 +153,16 @@ export class VendorService {
             vendorRecord = await tx.vendor.update({
               where: { id: existingVendor.id },
               data: vendorData,
-              include: { user: { select: { id: true, email: true, phone: true } } },
+              include: {
+                user: { select: { id: true, email: true, phone: true } },
+              },
             });
           } else {
             vendorRecord = await tx.vendor.create({
               data: vendorData,
-              include: { user: { select: { id: true, email: true, phone: true } } },
+              include: {
+                user: { select: { id: true, email: true, phone: true } },
+              },
             });
           }
 
@@ -156,12 +172,17 @@ export class VendorService {
 
             // find existing vendorServices for this vendor (if any) to avoid duplicates
             const existingVendorServices = await tx.vendorService.findMany({
-              where: { vendorId: vendorRecord.id, serviceId: { in: uniqueServiceIds } },
+              where: {
+                vendorId: vendorRecord.id,
+                serviceId: { in: uniqueServiceIds },
+              },
             });
-            const already = new Set(existingVendorServices.map(vs => vs.serviceId));
+            const already = new Set(
+              existingVendorServices.map((vs) => vs.serviceId),
+            );
             const createData = uniqueServiceIds
-              .filter(id => !already.has(id))
-              .map(serviceId => ({ vendorId: vendorRecord.id, serviceId }));
+              .filter((id) => !already.has(id))
+              .map((serviceId) => ({ vendorId: vendorRecord.id, serviceId }));
 
             if (createData.length > 0) {
               await tx.vendorService.createMany({ data: createData });
@@ -176,7 +197,9 @@ export class VendorService {
 
       // No existing user -> create user + vendor + optional services in a transaction
       const result = await this.prisma.$transaction(async (tx) => {
-        const passwordHash = dto.password ? await bcrypt.hash(dto.password, 10) : '';
+        const passwordHash = dto.password
+          ? await bcrypt.hash(dto.password, 10)
+          : '';
 
         const user = await tx.user.create({
           data: {
@@ -218,10 +241,12 @@ export class VendorService {
           const existingVendorServices = await tx.vendorService.findMany({
             where: { vendorId: vendor.id, serviceId: { in: uniqueServiceIds } },
           });
-          const already = new Set(existingVendorServices.map(vs => vs.serviceId));
+          const already = new Set(
+            existingVendorServices.map((vs) => vs.serviceId),
+          );
           const createData = uniqueServiceIds
-            .filter(id => !already.has(id))
-            .map(serviceId => ({ vendorId: vendor.id, serviceId }));
+            .filter((id) => !already.has(id))
+            .map((serviceId) => ({ vendorId: vendor.id, serviceId }));
 
           if (createData.length > 0) {
             await tx.vendorService.createMany({ data: createData });
@@ -235,7 +260,10 @@ export class VendorService {
       return result.vendor ?? result;
     } catch (error: any) {
       // map prisma unique constraint errors -> friendly messages
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         this.handleUniqueError(error);
       }
       // rethrow http errors
@@ -246,8 +274,6 @@ export class VendorService {
     }
   }
 
-
-
   // ---------- read -------------
   async getVendorById(id: string) {
     const vendor = await this.prisma.vendor.findUnique({
@@ -256,14 +282,13 @@ export class VendorService {
         user: true,
         documents: true, // VendorDocument[]
         VendorService: true,
-        BankDetails: true
+        BankDetails: true,
       },
     });
 
     if (!vendor) throw new NotFoundException('Vendor not found');
     return vendor;
   }
-
 
   async getVendorByUserId(userId: string) {
     try {
@@ -272,29 +297,29 @@ export class VendorService {
         select: {
           id: true,
           name: true,
-          vendor: true
-        }
-      })
+          vendor: true,
+        },
+      });
 
-      if (!user) throw new NotFoundException("User not found");
+      if (!user) throw new NotFoundException('User not found');
 
       return user;
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException("Internal server error")
+      throw new InternalServerErrorException('Internal server error');
     }
   }
-
 
   async updateVendorProfile(userId: string, dto: VendorProfileDto) {
     try {
       if (!userId) throw new BadRequestException('userId is required');
-      if (!dto || Object.keys(dto).length === 0) throw new BadRequestException('No fields provided to update');
+      if (!dto || Object.keys(dto).length === 0)
+        throw new BadRequestException('No fields provided to update');
 
       const user = await this.prisma.user.findUnique({
-        where: { id: userId }
-      })
-      if (!user) throw new NotFoundException("User not found")
+        where: { id: userId },
+      });
+      if (!user) throw new NotFoundException('User not found');
 
       // Build user update payload (only name supported here)
       const userUpdateData: any = {};
@@ -304,33 +329,50 @@ export class VendorService {
 
       // Build vendor update payload only with provided fields
       const vendorUpdateData: any = {};
-      if (dto.comp_name !== undefined) vendorUpdateData.comp_name = dto.comp_name;
-      if (dto.comp_type !== undefined) vendorUpdateData.comp_type = dto.comp_type;
+      if (dto.comp_name !== undefined)
+        vendorUpdateData.comp_name = dto.comp_name;
+      if (dto.comp_type !== undefined)
+        vendorUpdateData.comp_type = dto.comp_type;
       if (dto.address !== undefined) vendorUpdateData.address = dto.address;
       if (dto.website !== undefined) vendorUpdateData.website = dto.website;
-      if (dto.representative !== undefined) vendorUpdateData.representative = dto.representative;
-      if (dto.representative_email !== undefined) vendorUpdateData.representative_email = dto.representative_email;
-      if (dto.representative_phone !== undefined) vendorUpdateData.representative_phone = dto.representative_phone;
+      if (dto.representative !== undefined)
+        vendorUpdateData.representative = dto.representative;
+      if (dto.representative_email !== undefined)
+        vendorUpdateData.representative_email = dto.representative_email;
+      if (dto.representative_phone !== undefined)
+        vendorUpdateData.representative_phone = dto.representative_phone;
       if (dto.GST !== undefined) vendorUpdateData.GST = dto.GST;
       if (dto.PAN !== undefined) vendorUpdateData.PAN = dto.PAN;
 
       // Nothing to update?
-      if (Object.keys(userUpdateData).length === 0 && Object.keys(vendorUpdateData).length === 0) {
+      if (
+        Object.keys(userUpdateData).length === 0 &&
+        Object.keys(vendorUpdateData).length === 0
+      ) {
         throw new BadRequestException('No fields provided to update');
       }
 
       // Validate PAN/GST formats if provided
-      if (vendorUpdateData.PAN !== undefined && !this.isValidPAN(vendorUpdateData.PAN)) {
+      if (
+        vendorUpdateData.PAN !== undefined &&
+        !this.isValidPAN(vendorUpdateData.PAN)
+      ) {
         throw new BadRequestException('Invalid PAN number format.');
       }
-      if (vendorUpdateData.GST !== undefined && !this.isValidGST(vendorUpdateData.GST)) {
+      if (
+        vendorUpdateData.GST !== undefined &&
+        !this.isValidGST(vendorUpdateData.GST)
+      ) {
         throw new BadRequestException('Invalid GST number format.');
       }
 
       const updated = await this.prisma.$transaction(async (tx) => {
         // Ensure vendor profile exists for this user
-        const existingVendor = await tx.vendor.findUnique({ where: { userId } });
-        if (!existingVendor) throw new NotFoundException('Vendor profile not found for this user');
+        const existingVendor = await tx.vendor.findUnique({
+          where: { userId },
+        });
+        if (!existingVendor)
+          throw new NotFoundException('Vendor profile not found for this user');
 
         // Update user if needed
         if (Object.keys(userUpdateData).length > 0) {
@@ -344,16 +386,26 @@ export class VendorService {
         const updatedVendor = await tx.vendor.update({
           where: { userId },
           data: vendorUpdateData,
-          include: { user: { select: { id: true, email: true, phone: true, name: true } } },
+          include: {
+            user: {
+              select: { id: true, email: true, phone: true, name: true },
+            },
+          },
         });
 
         return updatedVendor;
       });
 
-      return { message: 'Vendor profile updated successfully', vendor: updated };
+      return {
+        message: 'Vendor profile updated successfully',
+        vendor: updated,
+      };
     } catch (error: any) {
       // Prisma unique constraint -> friendly message handler
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         this.handleUniqueError(error);
       }
       if (error instanceof HttpException) throw error;
@@ -362,7 +414,6 @@ export class VendorService {
       throw new InternalServerErrorException('Internal server error');
     }
   }
-
 
   // ---------- update ----------
   async updateVendor(id: string, dto: Partial<CreateVendorDto>) {
@@ -376,17 +427,25 @@ export class VendorService {
     // Normalize + validate PAN/GST only if provided
     if (typeof dto.PAN === 'string') {
       const pan = this.normalizePAN(dto.PAN);
-      if (!this.isValidPAN(pan)) throw new BadRequestException('Invalid PAN Number');
+      if (!this.isValidPAN(pan))
+        throw new BadRequestException('Invalid PAN Number');
       dto.PAN = pan;
     }
     if (typeof dto.GST === 'string') {
       const gst = this.normalizeGST(dto.GST);
-      if (!this.isValidGST(gst)) throw new BadRequestException('Invalid GST Number.');
+      if (!this.isValidGST(gst))
+        throw new BadRequestException('Invalid GST Number.');
       dto.GST = gst;
     }
 
     // Build allowed userData: only update these when present
-    const allowedUserFields = ['name', 'email', 'phone', 'password', 'isActive'];
+    const allowedUserFields = [
+      'name',
+      'email',
+      'phone',
+      'password',
+      'isActive',
+    ];
     const userData: Record<string, any> = {};
     for (const key of allowedUserFields) {
       if ((dto as any)[key] !== undefined) userData[key] = (dto as any)[key];
@@ -394,7 +453,6 @@ export class VendorService {
 
     // Hash password if present (use your helper if available)
     if (userData.password) {
-      const bcrypt = require('bcrypt');
       userData.password = await bcrypt.hash(String(userData.password), 10);
     }
 
@@ -417,16 +475,30 @@ export class VendorService {
     }
 
     // Handle serviceIds option (it may be undefined — that's allowed)
-    const incomingServiceIds: string[] | undefined = Array.isArray((dto as any).serviceIds)
+    const incomingServiceIds: string[] | undefined = Array.isArray(
+      (dto as any).serviceIds,
+    )
       ? ((dto as any).serviceIds.filter(Boolean).map(String) as string[])
       : undefined;
 
     // If nothing to update, return fresh vendor
-    if (Object.keys(userData).length === 0 && Object.keys(vendorData).length === 0 && incomingServiceIds === undefined) {
+    if (
+      Object.keys(userData).length === 0 &&
+      Object.keys(vendorData).length === 0 &&
+      incomingServiceIds === undefined
+    ) {
       return this.prisma.vendor.findUnique({
         where: { id },
         include: {
-          user: { select: { id: true, name: true, email: true, phone: true, isActive: true } },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              isActive: true,
+            },
+          },
           VendorService: { select: { serviceId: true } },
         },
       });
@@ -442,15 +514,14 @@ export class VendorService {
 
           const conflict = await tx.user.findFirst({
             where: {
-              AND: [
-                { OR: or },
-                { id: { not: existing.userId } },
-              ],
+              AND: [{ OR: or }, { id: { not: existing.userId } }],
             },
           });
 
           if (conflict) {
-            throw new ConflictException('Email or phone already in use by another account.');
+            throw new ConflictException(
+              'Email or phone already in use by another account.',
+            );
           }
         }
 
@@ -473,7 +544,9 @@ export class VendorService {
         // 4) Handle vendor services if incomingServiceIds is provided
         if (incomingServiceIds !== undefined) {
           // normalize & dedupe incoming list
-          const uniqueServiceIds: string[] = Array.from(new Set(incomingServiceIds));
+          const uniqueServiceIds: string[] = Array.from(
+            new Set(incomingServiceIds),
+          );
 
           // Optional: ensure all serviceIds exist in DroneService (safe guard)
           if (uniqueServiceIds.length > 0) {
@@ -481,10 +554,14 @@ export class VendorService {
               where: { id: { in: uniqueServiceIds } },
               select: { id: true },
             });
-            const foundIds = new Set<string>(foundServices.map(s => s.id));
-            const missing: string[] = uniqueServiceIds.filter(id => !foundIds.has(id));
+            const foundIds = new Set<string>(foundServices.map((s) => s.id));
+            const missing: string[] = uniqueServiceIds.filter(
+              (id) => !foundIds.has(id),
+            );
             if (missing.length > 0) {
-              throw new BadRequestException(`Some serviceIds are invalid: ${missing.join(', ')}`);
+              throw new BadRequestException(
+                `Some serviceIds are invalid: ${missing.join(', ')}`,
+              );
             }
           }
 
@@ -493,21 +570,29 @@ export class VendorService {
             where: { vendorId: id },
             select: { id: true, serviceId: true },
           });
-          const existingServiceIds = new Set<string>(existingVS.map(vs => String(vs.serviceId)));
+          const existingServiceIds = new Set<string>(
+            existingVS.map((vs) => String(vs.serviceId)),
+          );
 
           // determine which to add and which to remove
-          const toAdd: string[] = uniqueServiceIds.filter(sid => !existingServiceIds.has(sid));
-          const toKeep: string[] = uniqueServiceIds.filter(sid => existingServiceIds.has(sid));
-          const toRemove: string[] = existingVS.filter(vs => !uniqueServiceIds.includes(String(vs.serviceId))).map(vs => vs.id);
+          const toAdd: string[] = uniqueServiceIds.filter(
+            (sid) => !existingServiceIds.has(sid),
+          );
+          const toRemove: string[] = existingVS
+            .filter((vs) => !uniqueServiceIds.includes(String(vs.serviceId)))
+            .map((vs) => vs.id);
 
           // delete removed vendorService rows (by id)
           if (toRemove.length > 0) {
-            await tx.vendorService.deleteMany({ where: { id: { in: toRemove } } });
+            await tx.vendorService.deleteMany({
+              where: { id: { in: toRemove } },
+            });
           }
 
           // create new vendorService rows
           if (toAdd.length > 0) {
-            const createData: { vendorId: string; serviceId: string }[] = toAdd.map(serviceId => ({ vendorId: id, serviceId }));
+            const createData: { vendorId: string; serviceId: string }[] =
+              toAdd.map((serviceId) => ({ vendorId: id, serviceId }));
             await tx.vendorService.createMany({ data: createData });
           }
         }
@@ -516,7 +601,15 @@ export class VendorService {
         const fresh = await tx.vendor.findUnique({
           where: { id },
           include: {
-            user: { select: { id: true, name: true, email: true, phone: true, isActive: true } },
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                isActive: true,
+              },
+            },
             VendorService: { select: { serviceId: true } },
           },
         });
@@ -527,7 +620,10 @@ export class VendorService {
       return updated;
     } catch (error: any) {
       // Prisma unique constraint -> friendly message
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         this.handleUniqueError(error);
       }
       if (error instanceof HttpException) throw error;
@@ -536,9 +632,6 @@ export class VendorService {
       throw new InternalServerErrorException('Unable to update vendor');
     }
   }
-
-
-
 
   // ---------- delete ----------
   async deleteVendor(id: string, removeUserToo = true) {
@@ -551,11 +644,10 @@ export class VendorService {
 
     try {
       // collect vendor-scoped related ids first (if needed)
-      const bidReplies = await this.prisma.bidReply.findMany({
+      await this.prisma.bidReply.findMany({
         where: { vendorId: id },
         select: { id: true },
       });
-      const bidReplyIds = bidReplies.map(b => b.id);
 
       // Build operations in safe order
       const ops: Prisma.PrismaPromise<any>[] = [];
@@ -572,10 +664,14 @@ export class VendorService {
       ops.push(this.prisma.order.deleteMany({ where: { vendorId: id } }));
 
       // 4. delete vendorService rows (child rows)
-      ops.push(this.prisma.vendorService.deleteMany({ where: { vendorId: id } }));
+      ops.push(
+        this.prisma.vendorService.deleteMany({ where: { vendorId: id } }),
+      );
 
       // 5. delete vendorDocument rows
-      ops.push(this.prisma.vendorDocument.deleteMany({ where: { vendorId: id } }));
+      ops.push(
+        this.prisma.vendorDocument.deleteMany({ where: { vendorId: id } }),
+      );
 
       // 6. delete bank details for vendor
       ops.push(this.prisma.bankDetails.deleteMany({ where: { vendorId: id } }));
@@ -599,19 +695,19 @@ export class VendorService {
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2014') {
           throw new InternalServerErrorException(
-            'Unable to delete vendor because related records still reference child rows. Delete dependent records first or contact support.'
+            'Unable to delete vendor because related records still reference child rows. Delete dependent records first or contact support.',
           );
         }
         if (err.code === 'P2003') {
-          throw new InternalServerErrorException('Unable to delete vendor due to referenced foreign keys.');
+          throw new InternalServerErrorException(
+            'Unable to delete vendor due to referenced foreign keys.',
+          );
         }
       }
 
       throw new InternalServerErrorException('Failed to delete vendor');
     }
   }
-
-
 
   // ---------- list ----------
   // @Pagination([
@@ -731,8 +827,8 @@ export class VendorService {
             user: true,
             BankDetails: true,
             VendorService: true,
-            documents: true
-          }
+            documents: true,
+          },
         }),
         this.prisma.vendor.count({ where }),
       ]);
@@ -742,17 +838,18 @@ export class VendorService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        data
+        data,
       };
     } catch (error) {
       throw error;
     }
   }
 
-
   // ---------- summary ----------
   async summary(id: string, dto: QueryFilterDto) {
-    const vendor = await this.prisma.vendor.findUnique({ where: { userId: id } });
+    const vendor = await this.prisma.vendor.findUnique({
+      where: { userId: id },
+    });
     if (!vendor) throw new NotFoundException('Vendor Not Found');
 
     const vendorServices = await this.prisma.vendorService.findMany({
@@ -775,8 +872,12 @@ export class VendorService {
     }
 
     const currentDate = new Date();
-    const selectedMonth = dto?.month ? parseInt(dto.month) : currentDate.getMonth() + 1;
-    const selectedYear = dto?.year ? parseInt(dto.year) : currentDate.getFullYear();
+    const selectedMonth = dto?.month
+      ? parseInt(dto.month)
+      : currentDate.getMonth() + 1;
+    const selectedYear = dto?.year
+      ? parseInt(dto.year)
+      : currentDate.getFullYear();
 
     const startDate = new Date(selectedYear, selectedMonth - 1, 1);
     const endDate = new Date(selectedYear, selectedMonth, 1);
@@ -794,7 +895,10 @@ export class VendorService {
       pendingBidReqs,
     ] = await Promise.all([
       this.prisma.order.count({
-        where: { vendorId: vendor.id, createdAt: { gte: startDate, lt: endDate } },
+        where: {
+          vendorId: vendor.id,
+          createdAt: { gte: startDate, lt: endDate },
+        },
       }),
       this.prisma.order.count({
         where: {
@@ -811,7 +915,10 @@ export class VendorService {
         },
       }),
       this.prisma.order.aggregate({
-        where: { vendorId: vendor.id, createdAt: { gte: startDate, lt: endDate } },
+        where: {
+          vendorId: vendor.id,
+          createdAt: { gte: startDate, lt: endDate },
+        },
         _sum: { vendor_total: true },
       }),
       this.prisma.bidRequest.count({
@@ -866,17 +973,15 @@ export class VendorService {
     };
   }
 
-
-
   async getMonthlyOrders(dto: QueryFilterDto, userId: string) {
     try {
       const vendor = await this.prisma.vendor.findUnique({
         where: { userId },
         select: {
-          id: true
-        }
-      })
-      if(!vendor) throw new NotFoundException("Vendor Account not found")
+          id: true,
+        },
+      });
+      if (!vendor) throw new NotFoundException('Vendor Account not found');
       const month = Number(dto.month); // 1–12
       const year = Number(dto.year);
 
@@ -928,7 +1033,7 @@ export class VendorService {
 
       // 5️⃣ Remove empty week 5 if month has only 4 weeks
       const result = weeklyOrders.filter(
-        w => !(w.week === 5 && w.orders === 0)
+        (w) => !(w.week === 5 && w.orders === 0),
       );
 
       return result;
@@ -937,17 +1042,15 @@ export class VendorService {
     }
   }
 
-
-
   async getMonthlyRevenue(dto: QueryFilterDto, userId: string) {
     try {
       const vendor = await this.prisma.vendor.findUnique({
         where: { userId },
         select: {
-          id: true
-        }
-      })
-      if(!vendor) throw new NotFoundException("Vendor Account not found");
+          id: true,
+        },
+      });
+      if (!vendor) throw new NotFoundException('Vendor Account not found');
 
       const month = Number(dto.month); // 1–12
       const year = Number(dto.year);
@@ -1002,11 +1105,11 @@ export class VendorService {
 
       // 5️⃣ Round & remove empty week 5 if not needed
       const result = weeklyRevenue
-        .map(w => ({
+        .map((w) => ({
           week: w.week,
           revenue: Math.round((w.revenue + Number.EPSILON) * 100) / 100,
         }))
-        .filter(w => !(w.week === 5 && w.revenue === 0));
+        .filter((w) => !(w.week === 5 && w.revenue === 0));
 
       return result;
     } catch (error) {

@@ -1,7 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, IsInt, IsMongoId, IsArray, ArrayUnique } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsInt,
+  IsMongoId,
+  IsArray,
+  ArrayUnique,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
-import { CategoryStatus } from '../../common/enums/category-status.enum'
+import { CategoryStatus } from '../../common/enums/category-status.enum';
 
 export class CreateServiceCategoryDto {
   @ApiProperty()
@@ -24,7 +32,7 @@ export class CreateServiceCategoryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  shortDesc?: string
+  shortDesc?: string;
 
   @ApiProperty({ enum: CategoryStatus, required: false })
   @IsOptional()
@@ -33,18 +41,16 @@ export class CreateServiceCategoryDto {
 
   @IsOptional()
   @IsString()
-  metaTitle?: string
+  metaTitle?: string;
 
   @IsOptional()
   @IsString()
-  metaDescription?: string
+  metaDescription?: string;
 
   @IsOptional()
   @IsString()
-  metaKeyword?: string
+  metaKeyword?: string;
 }
-
-
 
 export class UpdateCategoryServicesDto {
   @IsMongoId()
@@ -64,17 +70,16 @@ export class UpdateCategoryServicesDto {
 
   @IsOptional()
   @IsString()
-  metaTitle?: string
+  metaTitle?: string;
 
   @IsOptional()
   @IsString()
-  metaDescription?: string
+  metaDescription?: string;
 
   @IsOptional()
   @IsString()
-  metaKeyword?: string
+  metaKeyword?: string;
 }
-
 
 export class UpdateCategoryPropertiesDto {
   @IsMongoId()
@@ -92,4 +97,3 @@ export class UpdateCategoryPropertiesDto {
   @IsMongoId({ each: true })
   removePropertyIds?: string[];
 }
-

@@ -7,5 +7,5 @@ export const GetCurrentUserId = createParamDecorator(
     const user = request.user as JwtPayload;
 
     return user?.sub; // typically `sub` is user ID in JWT
-  }
+  },
 );

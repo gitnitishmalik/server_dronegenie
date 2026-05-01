@@ -1,38 +1,37 @@
-import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-export class CreateMetaDto{
-    @IsString()
-    @IsNotEmpty()
-    pageName: string
+export class CreateMetaDto {
+  @IsString()
+  @IsNotEmpty()
+  pageName: string;
 
-    @IsString()
-    @IsOptional()
-    metaTitle?: string
+  @IsString()
+  @IsOptional()
+  metaTitle?: string;
 
-    @IsString()
-    @IsOptional()
-    metaDescription?: string
+  @IsString()
+  @IsOptional()
+  metaDescription?: string;
 
-    @IsString()
-    @IsOptional()
-    metaKeyword?: string
+  @IsString()
+  @IsOptional()
+  metaKeyword?: string;
 }
 
+export class UpdateMetaDto {
+  @IsString()
+  @IsOptional()
+  pageName?: string;
 
-export class UpdateMetaDto{
-    @IsString()
-    @IsOptional()
-    pageName?: string
+  @IsString()
+  @IsOptional()
+  metaTitle?: string;
 
-    @IsString()
-    @IsOptional()
-    metaTitle?: string
+  @IsString()
+  @IsOptional()
+  metaDescription?: string;
 
-    @IsString()
-    @IsOptional()
-    metaDescription?: string
-
-    @IsString()
-    @IsOptional()
-    metaKeyword?: string
+  @IsString()
+  @IsOptional()
+  metaKeyword?: string;
 }

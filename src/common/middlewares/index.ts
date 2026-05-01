@@ -1,1 +1,1 @@
-export * from './app-request-logger.middleware'
+export * from './app-request-logger.middleware';

@@ -9,12 +9,20 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CompanyType, MilestoneStatus, Prisma, RouteAccountStatus, VendorPayoutStatus } from '@prisma/client';
-import Razorpay = require('razorpay');
+import {
+  CompanyType,
+  MilestoneStatus,
+  Prisma,
+  RouteAccountStatus,
+  VendorPayoutStatus,
+} from '@prisma/client';
+import Razorpay from 'razorpay';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaymentService } from 'src/payment/payment.service';
-import { AdminPayoutListDto, CreateRouteAccountDto } from './dtos/vendor-payout.dto';
-
+import {
+  AdminPayoutListDto,
+  CreateRouteAccountDto,
+} from './dtos/vendor-payout.dto';
 
 // Map DroneGenie's CompanyType enum onto Razorpay Route's business_type field.
 // Values accepted by Razorpay: proprietorship | partnership | private_limited |
@@ -22,19 +30,28 @@ import { AdminPayoutListDto, CreateRouteAccountDto } from './dtos/vendor-payout.
 //   not_yet_registered | educational_institutes | public_sector_undertaking
 function mapBusinessType(t: CompanyType): string {
   switch (t) {
-    case CompanyType.PROPRIETORSHIP: return 'proprietorship';
-    case CompanyType.PARTNERSHIP: return 'partnership';
-    case CompanyType.PRIVATE_LIMITED_COMPANY: return 'private_limited';
-    case CompanyType.PUBLIC_LIMITED_COMPANY: return 'public_limited';
-    case CompanyType.PUBLIC_SECTOR_UNDERTAKING: return 'public_sector_undertaking';
-    case CompanyType.PRIVATE_SECTOR_UNDERTAKING: return 'proprietorship';
-    case CompanyType.CO_OPERATIVE_SOCIETIES: return 'society';
-    case CompanyType.TRUST_SOCIETY_ASSOCIATION_OF_PERSONS: return 'trust';
-    case CompanyType.GOVERNMENT_ORGANIZATIONS: return 'public_sector_undertaking';
-    default: return 'proprietorship';
+    case CompanyType.PROPRIETORSHIP:
+      return 'proprietorship';
+    case CompanyType.PARTNERSHIP:
+      return 'partnership';
+    case CompanyType.PRIVATE_LIMITED_COMPANY:
+      return 'private_limited';
+    case CompanyType.PUBLIC_LIMITED_COMPANY:
+      return 'public_limited';
+    case CompanyType.PUBLIC_SECTOR_UNDERTAKING:
+      return 'public_sector_undertaking';
+    case CompanyType.PRIVATE_SECTOR_UNDERTAKING:
+      return 'proprietorship';
+    case CompanyType.CO_OPERATIVE_SOCIETIES:
+      return 'society';
+    case CompanyType.TRUST_SOCIETY_ASSOCIATION_OF_PERSONS:
+      return 'trust';
+    case CompanyType.GOVERNMENT_ORGANIZATIONS:
+      return 'public_sector_undertaking';
+    default:
+      return 'proprietorship';
   }
 }
-
 
 // Razorpay's activation status lives on the linked account. Normalise onto our
 // enum so the rest of the app doesn't have to know Razorpay's exact wording.
@@ -56,7 +73,6 @@ function mapRazorpayStatus(rzpStatus: string | undefined): RouteAccountStatus {
       return RouteAccountStatus.CREATED;
   }
 }
-
 
 @Injectable()
 export class VendorPayoutService implements OnModuleInit {
@@ -96,7 +112,6 @@ export class VendorPayoutService implements OnModuleInit {
     if (!vendor) throw new NotFoundException('Vendor not found for this user');
     return vendor;
   }
-
 
   async createRouteAccount(userId: string, dto: CreateRouteAccountDto) {
     this.ensureV2Enabled();
@@ -142,14 +157,19 @@ export class VendorPayoutService implements OnModuleInit {
       if (typeof (this.client as any).accounts?.create === 'function') {
         rzpAccount = await (this.client as any).accounts.create(payload);
       } else {
-        throw new Error('Razorpay SDK does not expose accounts.create — upgrade SDK or enable Route');
+        throw new Error(
+          'Razorpay SDK does not expose accounts.create — upgrade SDK or enable Route',
+        );
       }
     } catch (err: any) {
       const statusCode = err?.statusCode;
       const desc = err?.error?.description || err?.message;
       this.logger.error(`accounts.create failed (${statusCode}): ${desc}`);
       // Route-not-enabled shows up as URL-not-found / 400 from Razorpay
-      if (statusCode === 400 && /requested URL was not found/i.test(desc || '')) {
+      if (
+        statusCode === 400 &&
+        /requested URL was not found/i.test(desc || '')
+      ) {
         throw new BadGatewayException(
           'Razorpay Route is not enabled on this merchant account yet. Please ask the admin to enable Route at razorpay.com/support.',
         );
@@ -178,7 +198,6 @@ export class VendorPayoutService implements OnModuleInit {
     return account;
   }
 
-
   async getMyAccount(userId: string) {
     this.ensureV2Enabled();
 
@@ -189,7 +208,6 @@ export class VendorPayoutService implements OnModuleInit {
     return account ?? null;
   }
 
-
   async syncAccountStatus(userId: string) {
     this.ensureV2Enabled();
     this.ensureClient();
@@ -199,12 +217,16 @@ export class VendorPayoutService implements OnModuleInit {
       where: { vendorId: vendor.id },
     });
     if (!account?.razorpay_account_id) {
-      throw new NotFoundException('No Route account exists yet — create one first');
+      throw new NotFoundException(
+        'No Route account exists yet — create one first',
+      );
     }
 
     let rzpAccount: any;
     try {
-      rzpAccount = await (this.client as any).accounts.fetch(account.razorpay_account_id);
+      rzpAccount = await (this.client as any).accounts.fetch(
+        account.razorpay_account_id,
+      );
     } catch (err: any) {
       const desc = err?.error?.description || err?.message;
       await this.prisma.vendorPayoutAccount.update({
@@ -220,7 +242,8 @@ export class VendorPayoutService implements OnModuleInit {
     const newStatus = mapRazorpayStatus(rzpAccount.status);
     const activated = newStatus === RouteAccountStatus.ACTIVATED;
 
-    const settlements = rzpAccount.settlements || rzpAccount?.profile?.settlements;
+    const settlements =
+      rzpAccount.settlements || rzpAccount?.profile?.settlements;
     const bankLast4 = settlements?.account_number
       ? String(settlements.account_number).slice(-4)
       : account.bank_account_last4;
@@ -229,10 +252,16 @@ export class VendorPayoutService implements OnModuleInit {
       where: { id: account.id },
       data: {
         status: newStatus,
-        activated_at: activated && !account.activated_at ? new Date() : account.activated_at,
+        activated_at:
+          activated && !account.activated_at
+            ? new Date()
+            : account.activated_at,
         bank_account_last4: bankLast4 ?? undefined,
         bank_ifsc: settlements?.ifsc_code ?? account.bank_ifsc ?? undefined,
-        bank_account_holder: settlements?.beneficiary_name ?? account.bank_account_holder ?? undefined,
+        bank_account_holder:
+          settlements?.beneficiary_name ??
+          account.bank_account_holder ??
+          undefined,
         last_synced_at: new Date(),
         last_sync_error: null,
       },
@@ -241,11 +270,15 @@ export class VendorPayoutService implements OnModuleInit {
     return updated;
   }
 
-
   // Vendor self-serve: paginated history of this vendor's own payouts with
   // the milestone/order context they need to reconcile their earnings.
   // Filters kept minimal (status only) — admin gets the richer search.
-  async getMyPayouts(userId: string, page: number, limit: number, status?: VendorPayoutStatus) {
+  async getMyPayouts(
+    userId: string,
+    page: number,
+    limit: number,
+    status?: VendorPayoutStatus,
+  ) {
     this.ensureV2Enabled();
 
     const vendor = await this.getVendorByUserId(userId);
@@ -298,7 +331,6 @@ export class VendorPayoutService implements OnModuleInit {
     };
   }
 
-
   // Admin-side view: paginated list of every VendorPayout row with the
   // minimal context admin needs to reconcile (linked milestone, vendor,
   // order). Supports status/vendor/date filters.
@@ -312,7 +344,7 @@ export class VendorPayoutService implements OnModuleInit {
     const where: Prisma.VendorPayoutWhereInput = {
       ...(dto.status ? { status: dto.status } : {}),
       ...(dto.vendorId ? { vendorId: dto.vendorId } : {}),
-      ...((dto.fromDate || dto.toDate)
+      ...(dto.fromDate || dto.toDate
         ? {
             createdAt: {
               ...(dto.fromDate ? { gte: new Date(dto.fromDate) } : {}),
@@ -366,7 +398,6 @@ export class VendorPayoutService implements OnModuleInit {
     };
   }
 
-
   // Admin retries a previously failed payout. Looks at the linked milestone's
   // status to decide intent:
   //   COMPLETED → retry release (transfers.edit on_hold=false)
@@ -384,20 +415,28 @@ export class VendorPayoutService implements OnModuleInit {
       throw new Error('Payout not found');
     }
     if (payout.status !== VendorPayoutStatus.FAILED) {
-      throw new Error(`Payout is ${payout.status} — only FAILED payouts can be retried`);
+      throw new Error(
+        `Payout is ${payout.status} — only FAILED payouts can be retried`,
+      );
     }
 
     const milestone = payout.milestones[0];
     if (!milestone) {
-      throw new Error('Payout has no linked milestone — cannot determine retry action');
+      throw new Error(
+        'Payout has no linked milestone — cannot determine retry action',
+      );
     }
 
     if (milestone.status === MilestoneStatus.COMPLETED) {
-      const r = await this.paymentService.releaseMilestoneTransfer(milestone.id);
+      const r = await this.paymentService.releaseMilestoneTransfer(
+        milestone.id,
+      );
       return { action: 'release', ...r };
     }
     if (milestone.status === MilestoneStatus.REFUNDED) {
-      const r = await this.paymentService.reverseMilestoneTransferAndRefund(milestone.id);
+      const r = await this.paymentService.reverseMilestoneTransferAndRefund(
+        milestone.id,
+      );
       return { action: 'reverse+refund', ...r };
     }
     throw new Error(
@@ -405,18 +444,20 @@ export class VendorPayoutService implements OnModuleInit {
     );
   }
 
-
   // Streaming CSV export of the admin payouts list. Cursor-pages through
   // VendorPayout rows so memory stays flat even when the dataset grows.
   // Applies the same filters as adminList() and writes directly to the
   // provided WritableStream (the controller sets the response headers).
-  async exportPayoutsCsv(dto: AdminPayoutListDto, writer: NodeJS.WritableStream) {
+  async exportPayoutsCsv(
+    dto: AdminPayoutListDto,
+    writer: NodeJS.WritableStream,
+  ) {
     this.ensureV2Enabled();
 
     const where: Prisma.VendorPayoutWhereInput = {
       ...(dto.status ? { status: dto.status } : {}),
       ...(dto.vendorId ? { vendorId: dto.vendorId } : {}),
-      ...((dto.fromDate || dto.toDate)
+      ...(dto.fromDate || dto.toDate
         ? {
             createdAt: {
               ...(dto.fromDate ? { gte: new Date(dto.fromDate) } : {}),
@@ -431,20 +472,22 @@ export class VendorPayoutService implements OnModuleInit {
 
     // BOM so Excel opens it as UTF-8.
     writer.write('﻿');
-    writer.write([
-      'created_at',
-      'vendor',
-      'representative',
-      'order_no',
-      'milestone_seq',
-      'milestone_title',
-      'milestone_status',
-      'amount_inr',
-      'payout_status',
-      'razorpay_transfer_id',
-      'razorpay_reference_id',
-      'failure_reason',
-    ].join(',') + '\n');
+    writer.write(
+      [
+        'created_at',
+        'vendor',
+        'representative',
+        'order_no',
+        'milestone_seq',
+        'milestone_title',
+        'milestone_status',
+        'amount_inr',
+        'payout_status',
+        'razorpay_transfer_id',
+        'razorpay_reference_id',
+        'failure_reason',
+      ].join(',') + '\n',
+    );
 
     const batchSize = 500;
     let lastCreatedAt: Date | null = null;
@@ -493,20 +536,21 @@ export class VendorPayoutService implements OnModuleInit {
 
       for (const r of rows) {
         const ms = r.milestones[0];
-        const line = [
-          escapeCsv(r.createdAt.toISOString()),
-          escapeCsv(r.vendor?.comp_name),
-          escapeCsv(r.vendor?.representative),
-          escapeCsv(ms?.order?.orderNo),
-          escapeCsv(ms?.seq),
-          escapeCsv(ms?.title),
-          escapeCsv(ms?.status),
-          (r.amount / 100).toFixed(2),
-          escapeCsv(r.status),
-          escapeCsv(r.provider_payout_id),
-          escapeCsv(r.provider_reference_id),
-          escapeCsv(r.failure_reason),
-        ].join(',') + '\n';
+        const line =
+          [
+            escapeCsv(r.createdAt.toISOString()),
+            escapeCsv(r.vendor?.comp_name),
+            escapeCsv(r.vendor?.representative),
+            escapeCsv(ms?.order?.orderNo),
+            escapeCsv(ms?.seq),
+            escapeCsv(ms?.title),
+            escapeCsv(ms?.status),
+            (r.amount / 100).toFixed(2),
+            escapeCsv(r.status),
+            escapeCsv(r.provider_payout_id),
+            escapeCsv(r.provider_reference_id),
+            escapeCsv(r.failure_reason),
+          ].join(',') + '\n';
         writer.write(line);
       }
 

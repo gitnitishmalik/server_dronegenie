@@ -1,22 +1,44 @@
-import { BadRequestException, ConflictException, ForbiddenException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
-import { JwtPayload } from "src/auth/types";
-import { ConfigService } from "@nestjs/config";
-import { PrismaService } from "src/prisma/prisma.service";
-import { AdminOrderReportDto, DisputeMilestoneDto, MilestoneResolutionDecision, OrderDto, RedeemMilestoneOtpDto, ResolveMilestoneDto, UpdateOrderDto } from "./dtos/order.dto";
-import { generateOrderId } from "src/common/utils/orderid.util";
-import { DgChargeType, MilestoneStatus, Prisma, PrismaClient, UserRole } from "@prisma/client";
-import { BidStatus, OrderStatus } from "src/common/enums";
-import { Pagination } from "src/common/decorators/pagination.decorator";
-import { PaginationDto } from "src/common/dto";
-import { sendSMS } from "src/common/utils/send-sms.util";
-import { ReplyStatus } from '@prisma/client'
-import { PaymentService } from "src/payment/payment.service";
-import { InvoiceService } from "src/invoice/invoice.service";
-import { MailService } from "src/mail/mail.service";
-import { Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { JwtPayload } from 'src/auth/types';
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from 'src/prisma/prisma.service';
+import {
+  AdminOrderReportDto,
+  DisputeMilestoneDto,
+  MilestoneResolutionDecision,
+  RedeemMilestoneOtpDto,
+  ResolveMilestoneDto,
+  UpdateOrderDto,
+} from './dtos/order.dto';
+import {
+  DgChargeType,
+  MilestoneStatus,
+  Prisma,
+  PrismaClient,
+  UserRole,
+} from '@prisma/client';
+import { BidStatus, OrderStatus } from 'src/common/enums';
+import { PaginationDto } from 'src/common/dto';
+import { sendSMS } from 'src/common/utils/send-sms.util';
+import { ReplyStatus } from '@prisma/client';
+import { PaymentService } from 'src/payment/payment.service';
+import { InvoiceService } from 'src/invoice/invoice.service';
+import { MailService } from 'src/mail/mail.service';
+import { Logger } from '@nestjs/common';
 
-
-type ProposedMilestone = { title: string; description?: string | null; vendor_amount: number };
+type ProposedMilestone = {
+  title: string;
+  description?: string | null;
+  vendor_amount: number;
+};
 type MilestoneRow = {
   seq: number;
   title: string;
@@ -26,7 +48,6 @@ type MilestoneRow = {
   gst_amount: number;
   customer_amount: number;
 };
-
 
 // Split an order's pricing into N OrderMilestone rows. Per-row amounts are
 // rounded to 2dp; any rounding residue is absorbed into the last row's
@@ -44,7 +65,15 @@ function buildMilestoneRows(args: {
   dgType: DgChargeType;
   dgVal: number;
 }): MilestoneRow[] {
-  const { proposed, fallbackTitle, ven_price, cust_price, gstPct, dgType, dgVal } = args;
+  const {
+    proposed,
+    fallbackTitle,
+    ven_price,
+    cust_price,
+    gstPct,
+    dgType,
+    dgVal,
+  } = args;
 
   const hasProposed = Array.isArray(proposed) && proposed.length > 0;
   const input: ProposedMilestone[] = hasProposed
@@ -57,10 +86,13 @@ function buildMilestoneRows(args: {
 
   const rows: MilestoneRow[] = input.map((m, i) => {
     const va = m.vendor_amount ?? 0;
-    const commission = dgType === DgChargeType.FLAT
-      ? (sumVendor > 0 ? dgVal * (va / sumVendor) : 0)
-      : va * dgVal / 100;
-    const gst_amount = (va + commission) * gstPct / 100;
+    const commission =
+      dgType === DgChargeType.FLAT
+        ? sumVendor > 0
+          ? dgVal * (va / sumVendor)
+          : 0
+        : (va * dgVal) / 100;
+    const gst_amount = ((va + commission) * gstPct) / 100;
     const customer_amount = va + commission + gst_amount;
     return {
       seq: i + 1,
@@ -78,19 +110,20 @@ function buildMilestoneRows(args: {
   // vendor_amount stays untouched — the vendor proposed those exact numbers.
   if (rows.length > 0) {
     const targetMargin = r2(cust_price - ven_price);
-    const targetGst = r2(cust_price * gstPct / 100);
+    const targetGst = r2((cust_price * gstPct) / 100);
     const head = rows.slice(0, -1);
     const last = rows[rows.length - 1];
     const sumHeadMargin = head.reduce((a, r) => a + r.commission_amount, 0);
     const sumHeadGst = head.reduce((a, r) => a + r.gst_amount, 0);
     last.commission_amount = r2(targetMargin - sumHeadMargin);
     last.gst_amount = r2(targetGst - sumHeadGst);
-    last.customer_amount = r2(last.vendor_amount + last.commission_amount + last.gst_amount);
+    last.customer_amount = r2(
+      last.vendor_amount + last.commission_amount + last.gst_amount,
+    );
   }
 
   return rows;
 }
-
 
 @Injectable({})
 export class OrderService {
@@ -102,7 +135,7 @@ export class OrderService {
     private readonly paymentService: PaymentService,
     private readonly invoiceService: InvoiceService,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
 
   // Fire both vendor + customer invoice generation. The underlying
   // generateInvoice() is idempotent (no-op if the invoice row already
@@ -118,20 +151,37 @@ export class OrderService {
       where: { id: orderId },
       select: {
         orderNo: true,
-        vendor: { select: { representative: true, representative_email: true, comp_name: true } },
-        customer: { select: { representative: true, representative_email: true, comp_name: true } },
+        vendor: {
+          select: {
+            representative: true,
+            representative_email: true,
+            comp_name: true,
+          },
+        },
+        customer: {
+          select: {
+            representative: true,
+            representative_email: true,
+            comp_name: true,
+          },
+        },
       },
     });
     const orderNo = order?.orderNo ?? orderId;
 
     try {
-      const res = await this.invoiceService.generateInvoice({ orderId }, UserRole.VENDOR);
+      const res = await this.invoiceService.generateInvoice(
+        { orderId },
+        UserRole.VENDOR,
+      );
       const rec = res?.vendorInvoiceRecord;
       if (rec?.buffer && order?.vendor?.representative_email) {
         await this.mailService.sendInvoiceEmail(
           order.vendor.representative_email,
           order.vendor.representative || order.vendor.comp_name || 'Vendor',
-          rec.invoice.seed ? `${rec.invoice.seed}-${String(rec.invoice.latest).padStart(4, '0')}` : rec.fileName,
+          rec.invoice.seed
+            ? `${rec.invoice.seed}-${String(rec.invoice.latest).padStart(4, '0')}`
+            : rec.fileName,
           orderNo,
           'VENDOR',
           rec.buffer,
@@ -139,17 +189,26 @@ export class OrderService {
         );
       }
     } catch (err: any) {
-      this.logger.error(`auto-invoice VENDOR failed for order=${orderId}: ${err?.message}`);
+      this.logger.error(
+        `auto-invoice VENDOR failed for order=${orderId}: ${err?.message}`,
+      );
     }
 
     try {
-      const res = await this.invoiceService.generateInvoice({ orderId }, UserRole.CUSTOMER);
+      const res = await this.invoiceService.generateInvoice(
+        { orderId },
+        UserRole.CUSTOMER,
+      );
       const rec = res?.customerInvoiceRecord;
       if (rec?.buffer && order?.customer?.representative_email) {
         await this.mailService.sendInvoiceEmail(
           order.customer.representative_email,
-          order.customer.representative || order.customer.comp_name || 'Customer',
-          rec.invoice.seed ? `${rec.invoice.seed}-${String(rec.invoice.latest).padStart(4, '0')}` : rec.fileName,
+          order.customer.representative ||
+            order.customer.comp_name ||
+            'Customer',
+          rec.invoice.seed
+            ? `${rec.invoice.seed}-${String(rec.invoice.latest).padStart(4, '0')}`
+            : rec.fileName,
           orderNo,
           'CUSTOMER',
           rec.buffer,
@@ -157,7 +216,9 @@ export class OrderService {
         );
       }
     } catch (err: any) {
-      this.logger.error(`auto-invoice CUSTOMER failed for order=${orderId}: ${err?.message}`);
+      this.logger.error(
+        `auto-invoice CUSTOMER failed for order=${orderId}: ${err?.message}`,
+      );
     }
   }
 
@@ -175,8 +236,10 @@ export class OrderService {
     }
   }
 
-
-  private async getNextOrderSequence(tx: PrismaClient | Prisma.TransactionClient, year: number) {
+  private async getNextOrderSequence(
+    tx: PrismaClient | Prisma.TransactionClient,
+    year: number,
+  ) {
     const existing = await tx.orderCounter.findUnique({ where: { year } });
 
     if (!existing) {
@@ -192,150 +255,150 @@ export class OrderService {
     return updated.seq;
   }
 
-
-
   async create(bidReplyId: string, caller: JwtPayload) {
     const isAdmin = caller.role?.includes(UserRole.ADMIN);
 
     // Phase 1: do all DB mutations in a single transaction so the
     // order/milestones/bid-request/bid-reply status changes are atomic.
-    const { order, customerPhone, otp } = await this.prisma.$transaction(async (tx) => {
-      const bidReply = await tx.bidReply.findUniqueOrThrow({
-        where: { id: bidReplyId },
-        include: {
-          vendor: true,
-          bidRequests: {
-            include: {
-              customer: {
-                include: {
-                  user: { select: { id: true, phone: true, email: true } },
+    const { order, customerPhone, otp } = await this.prisma.$transaction(
+      async (tx) => {
+        const bidReply = await tx.bidReply.findUniqueOrThrow({
+          where: { id: bidReplyId },
+          include: {
+            vendor: true,
+            bidRequests: {
+              include: {
+                customer: {
+                  include: {
+                    user: { select: { id: true, phone: true, email: true } },
+                  },
                 },
+                service: true,
               },
-              service: true,
             },
           },
-        },
-      });
+        });
 
-      const { vendor, bidRequests } = bidReply;
-      const { customer, service } = bidRequests;
+        const { vendor, bidRequests } = bidReply;
+        const { customer, service } = bidRequests;
 
-      // Ownership: only the customer who created this bid request can accept
-      // bids on it. Admin bypasses for ops-team scenarios.
-      if (!isAdmin && customer.user?.id !== caller.sub) {
-        throw new ForbiddenException(
-          'Only the customer who created this bid request can accept bids on it',
-        );
-      }
+        // Ownership: only the customer who created this bid request can accept
+        // bids on it. Admin bypasses for ops-team scenarios.
+        if (!isAdmin && customer.user?.id !== caller.sub) {
+          throw new ForbiddenException(
+            'Only the customer who created this bid request can accept bids on it',
+          );
+        }
 
-      // Idempotency / race guards — must be PENDING on both ends.
-      if (bidReply.status !== ReplyStatus.PENDING) {
-        throw new BadRequestException(
-          `Bid reply is ${bidReply.status}; only PENDING bids can be accepted`,
-        );
-      }
-      if (bidRequests.status !== BidStatus.PENDING) {
-        throw new BadRequestException(
-          `Bid request is ${bidRequests.status}; another bid has already been awarded`,
-        );
-      }
+        // Idempotency / race guards — must be PENDING on both ends.
+        if (bidReply.status !== ReplyStatus.PENDING) {
+          throw new BadRequestException(
+            `Bid reply is ${bidReply.status}; only PENDING bids can be accepted`,
+          );
+        }
+        if (bidRequests.status !== BidStatus.PENDING) {
+          throw new BadRequestException(
+            `Bid request is ${bidRequests.status}; another bid has already been awarded`,
+          );
+        }
 
-      const gst = service?.gst ?? 0;
-      const cust_price = bidReply.cstmrPrice ?? 0;
-      const ven_price = bidReply.price ?? 0;
+        const gst = service?.gst ?? 0;
+        const cust_price = bidReply.cstmrPrice ?? 0;
+        const ven_price = bidReply.price ?? 0;
 
-      const cust_total = cust_price + (gst / 100) * cust_price;
-      const ven_total = ven_price + (gst / 100) * ven_price;
-      const dg_margin = cust_total - ven_total;
+        const cust_total = cust_price + (gst / 100) * cust_price;
+        const ven_total = ven_price + (gst / 100) * ven_price;
+        const dg_margin = cust_total - ven_total;
 
-      // 2️⃣ Generate OTP
-      const otp = this.generateOTP();
+        // 2️⃣ Generate OTP
+        const otp = this.generateOTP();
 
-      // 3️⃣ Generate order number (SAFE)
-      const year = new Date().getFullYear();
-      const seq = await this.getNextOrderSequence(tx, year);
-      const padded = String(seq).padStart(4, '0');
-      const orderNo = `OD-${year}-${padded}`;
+        // 3️⃣ Generate order number (SAFE)
+        const year = new Date().getFullYear();
+        const seq = await this.getNextOrderSequence(tx, year);
+        const padded = String(seq).padStart(4, '0');
+        const orderNo = `OD-${year}-${padded}`;
 
-      // 3.5️⃣ Build OrderMilestone breakdown from the vendor's proposed milestones.
-      // Pre-PR #2 bids have no proposed_milestones — we synthesize a single milestone
-      // covering the full bid so every Order has ≥1 OrderMilestone row going forward.
-      const milestoneRows = buildMilestoneRows({
-        proposed: bidReply.proposed_milestones,
-        fallbackTitle: service!.service_name ?? 'Project',
-        ven_price,
-        cust_price,
-        gstPct: gst,
-        dgType: service!.dgChargeType,
-        dgVal: service!.dgCharges ?? 0,
-      });
+        // 3.5️⃣ Build OrderMilestone breakdown from the vendor's proposed milestones.
+        // Pre-PR #2 bids have no proposed_milestones — we synthesize a single milestone
+        // covering the full bid so every Order has ≥1 OrderMilestone row going forward.
+        const milestoneRows = buildMilestoneRows({
+          proposed: bidReply.proposed_milestones,
+          fallbackTitle: service!.service_name ?? 'Project',
+          ven_price,
+          cust_price,
+          gstPct: gst,
+          dgType: service!.dgChargeType,
+          dgVal: service!.dgCharges ?? 0,
+        });
 
-      // 4️⃣ Create order (with nested milestones + frozen commission terms)
-      const order = await tx.order.create({
-        data: {
-          orderNo,
-          serviceId: service!.id,
-          service_name: service!.service_name,
-          service_desc: service!.description ?? 'N/A',
-          startDate: bidReply.startDate,
-          endDate: bidReply.endDate,
-          job_desc: bidReply.description ?? 'N/A',
-          bidReqId: bidRequests.id,
-          vendorId: vendor.id,
-          customerId: customer.id,
+        // 4️⃣ Create order (with nested milestones + frozen commission terms)
+        const order = await tx.order.create({
+          data: {
+            orderNo,
+            serviceId: service!.id,
+            service_name: service!.service_name,
+            service_desc: service!.description ?? 'N/A',
+            startDate: bidReply.startDate,
+            endDate: bidReply.endDate,
+            job_desc: bidReply.description ?? 'N/A',
+            bidReqId: bidRequests.id,
+            vendorId: vendor.id,
+            customerId: customer.id,
 
-          vendor_gst: gst,
-          vendor_price: Number(ven_price.toFixed(2)),
+            vendor_gst: gst,
+            vendor_price: Number(ven_price.toFixed(2)),
 
-          dg_charges: service!.dgCharges ?? 0,
-          dg_gst: gst,
-          dg_price: Number(cust_price.toFixed(2)),
+            dg_charges: service!.dgCharges ?? 0,
+            dg_gst: gst,
+            dg_price: Number(cust_price.toFixed(2)),
 
-          vendor_total: Number(ven_total.toFixed(2)),
-          customer_total: Number(cust_total.toFixed(2)),
-          dg_margin: Number(dg_margin.toFixed(2)),
+            vendor_total: Number(ven_total.toFixed(2)),
+            customer_total: Number(cust_total.toFixed(2)),
+            dg_margin: Number(dg_margin.toFixed(2)),
 
-          // Freeze commission terms at accept-time so later DroneService edits
-          // don't rewrite history (Payments v2 schema — still no runtime behaviour).
-          dg_commission_snapshot_type: service!.dgChargeType,
-          dg_commission_snapshot_value: service!.dgCharges ?? 0,
+            // Freeze commission terms at accept-time so later DroneService edits
+            // don't rewrite history (Payments v2 schema — still no runtime behaviour).
+            dg_commission_snapshot_type: service!.dgChargeType,
+            dg_commission_snapshot_value: service!.dgCharges ?? 0,
 
-          milestones: { create: milestoneRows },
+            milestones: { create: milestoneRows },
 
-          otp,
-          status: OrderStatus.PENDING,
-        },
-      });
+            otp,
+            status: OrderStatus.PENDING,
+          },
+        });
 
-      // 5️⃣ Update bid + request status
-      await tx.bidRequest.update({
-        where: { id: bidRequests.id },
-        data: { status: BidStatus.AWARDED },
-      });
+        // 5️⃣ Update bid + request status
+        await tx.bidRequest.update({
+          where: { id: bidRequests.id },
+          data: { status: BidStatus.AWARDED },
+        });
 
-      await tx.bidReply.update({
-        where: { id: bidReply.id },
-        data: { status: ReplyStatus.ACCEPTED },
-      });
+        await tx.bidReply.update({
+          where: { id: bidReply.id },
+          data: { status: ReplyStatus.ACCEPTED },
+        });
 
-      // Auto-reject sibling bids on the same request so vendors see a clear
-      // outcome instead of being stuck in PENDING forever.
-      await tx.bidReply.updateMany({
-        where: {
-          bidReqId: bidRequests.id,
-          id: { not: bidReply.id },
-          status: ReplyStatus.PENDING,
-        },
-        data: { status: ReplyStatus.REJECTED },
-      });
+        // Auto-reject sibling bids on the same request so vendors see a clear
+        // outcome instead of being stuck in PENDING forever.
+        await tx.bidReply.updateMany({
+          where: {
+            bidReqId: bidRequests.id,
+            id: { not: bidReply.id },
+            status: ReplyStatus.PENDING,
+          },
+          data: { status: ReplyStatus.REJECTED },
+        });
 
-      const customerPhone =
-        customer.user?.phone?.trim() ||
-        customer.representative_phone?.trim() ||
-        '';
+        const customerPhone =
+          customer.user?.phone?.trim() ||
+          customer.representative_phone?.trim() ||
+          '';
 
-      return { order, customerPhone, otp };
-    });
+        return { order, customerPhone, otp };
+      },
+    );
 
     // Phase 2: SMS is best-effort and MUST NOT roll back the order. If
     // Fast2SMS is down or the phone is missing, the order still stands and
@@ -357,8 +420,6 @@ export class OrderService {
 
     return order;
   }
-
-
 
   // @Pagination(['service_name', 'service_desc', 'job_desc', 'orderNo', 'payment_method', 'transactionId'])
   // async getAllOrderForVendor(
@@ -383,7 +444,6 @@ export class OrderService {
       const page = dto.page ? parseInt(dto.page) : 1;
       const limit = dto.limit ? parseInt(dto.limit) : 10;
       const skip = (page - 1) * limit;
-
 
       let customerIds: string[] = [];
 
@@ -410,9 +470,8 @@ export class OrderService {
           select: { id: true },
         });
 
-        customerIds = customers.map(c => c.id);
+        customerIds = customers.map((c) => c.id);
       }
-
 
       const where: Prisma.OrderWhereInput = {
         vendorId,
@@ -438,17 +497,16 @@ export class OrderService {
             },
             ...(customerIds.length
               ? [
-                {
-                  customerId: {
-                    in: customerIds,
+                  {
+                    customerId: {
+                      in: customerIds,
+                    },
                   },
-                },
-              ]
+                ]
               : []),
           ],
         }),
       };
-
 
       const data = await this.prisma.order.findMany({
         where,
@@ -538,8 +596,6 @@ export class OrderService {
     }
   }
 
-
-
   // @Pagination(['service_name', 'service_desc', 'job_desc', 'orderNo', 'payment_method', 'transactionId'])
   // async getAllOrderForCustomer(
   //     dto: PaginationDto,
@@ -572,21 +628,18 @@ export class OrderService {
               service_name: {
                 contains: dto.search,
                 mode: 'insensitive',
-
               },
             },
             {
               service_desc: {
                 contains: dto.search,
                 mode: 'insensitive',
-
               },
             },
             {
               job_desc: {
                 contains: dto.search,
                 mode: 'insensitive',
-
               },
             },
             {
@@ -644,11 +697,10 @@ export class OrderService {
                 user: {
                   select: {
                     id: true,
-                    name: true
-                  }
-
-                }
-              }
+                    name: true,
+                  },
+                },
+              },
             },
             customer: {
               select: {
@@ -657,8 +709,8 @@ export class OrderService {
                 comp_type: true,
                 representative: true,
                 representative_email: true,
-                representative_phone: true
-              }
+                representative_phone: true,
+              },
             },
             bidRequest: {
               select: {
@@ -669,11 +721,10 @@ export class OrderService {
                 location: true,
                 status: true,
                 description: true,
-              }
-
+              },
             },
             customer_invoice: true,
-          }
+          },
         }),
         this.prisma.order.count({ where }),
       ]);
@@ -683,13 +734,12 @@ export class OrderService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        data
+        data,
       };
     } catch (error) {
       throw error;
     }
   }
-
 
   // @Pagination(['service_name', 'service_desc', 'job_desc', 'orderNo', 'payment_method', 'transactionId'])
   // async getAll(
@@ -774,16 +824,16 @@ export class OrderService {
             vendor: {
               include: {
                 user: true,
-              }
+              },
             },
             customer: {
               include: {
                 user: true,
-              }
+              },
             },
             customer_invoice: true,
-            vendor_invoice: true
-          }
+            vendor_invoice: true,
+          },
         }),
         this.prisma.order.count({ where }),
       ]);
@@ -793,7 +843,7 @@ export class OrderService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        data
+        data,
       };
     } catch (error) {
       throw error;
@@ -804,32 +854,34 @@ export class OrderService {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: { vendor: { select: { userId: true } } },
-    })
+    });
 
     if (!order) {
-      throw new NotFoundException("Order Not Found");
+      throw new NotFoundException('Order Not Found');
     }
 
     // Vendors can only complete their own orders. The OTP came from the
     // customer via SMS — the vendor presents it to mark work done.
     const isAdmin = caller.role?.includes(UserRole.ADMIN);
     if (!isAdmin && order.vendor?.userId !== caller.sub) {
-      throw new ForbiddenException('You can only complete orders assigned to you');
+      throw new ForbiddenException(
+        'You can only complete orders assigned to you',
+      );
     }
 
     const isOtpMatch = order.otp === dto.otp;
 
     if (!isOtpMatch) {
-      throw new BadRequestException("Invalid OTP");
+      throw new BadRequestException('Invalid OTP');
     }
 
     const compeltedOrder = await this.prisma.order.update({
       where: { id },
       data: {
-        otp: "",
-        status: OrderStatus.COMPLETED
-      }
-    })
+        otp: '',
+        status: OrderStatus.COMPLETED,
+      },
+    });
 
     // Fire auto-invoice generation off the critical path. Best-effort; errors
     // are logged inside the helper. Vendor + customer PDFs will exist on first
@@ -838,7 +890,6 @@ export class OrderService {
 
     return compeltedOrder;
   }
-
 
   async getOrderById(id: string) {
     try {
@@ -852,20 +903,19 @@ export class OrderService {
           vendor_invoice: true,
           customer_invoice: true,
           milestones: { orderBy: { seq: 'asc' } },
-        }
-      })
+        },
+      });
 
       if (!order) {
-        throw new NotFoundException("Order not found");
+        throw new NotFoundException('Order not found');
       }
 
       return order;
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException("Internal server error")
+      throw new InternalServerErrorException('Internal server error');
     }
   }
-
 
   async getOrderByIdForCustomer(id: string, caller: JwtPayload) {
     try {
@@ -893,15 +943,19 @@ export class OrderService {
           // Pay button when the vendor hasn't completed Route onboarding.
           // BE already rejects in createMilestonePaymentOrder; surfacing
           // status here replaces the click-then-error round trip.
-          vendor: { include: { payout_account: { select: { status: true, activated_at: true } } } },
+          vendor: {
+            include: {
+              payout_account: { select: { status: true, activated_at: true } },
+            },
+          },
           customer: { include: { user: { select: { id: true } } } },
           customer_invoice: true,
           milestones: { orderBy: { seq: 'asc' } },
-        }
-      })
+        },
+      });
 
       if (!order) {
-        throw new NotFoundException("Order not found");
+        throw new NotFoundException('Order not found');
       }
 
       const isAdmin = caller.role?.includes(UserRole.ADMIN);
@@ -912,10 +966,9 @@ export class OrderService {
       return order;
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException("Internal server error")
+      throw new InternalServerErrorException('Internal server error');
     }
   }
-
 
   async getOrderByIdForVendor(id: string, caller: JwtPayload) {
     try {
@@ -942,11 +995,11 @@ export class OrderService {
           customer: true,
           vendor_invoice: true,
           milestones: { orderBy: { seq: 'asc' } },
-        }
-      })
+        },
+      });
 
       if (!order) {
-        throw new NotFoundException("Order not found");
+        throw new NotFoundException('Order not found');
       }
 
       const isAdmin = caller.role?.includes(UserRole.ADMIN);
@@ -957,10 +1010,9 @@ export class OrderService {
       return order;
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException("Internal server error")
+      throw new InternalServerErrorException('Internal server error');
     }
   }
-
 
   async getReport(dto: AdminOrderReportDto) {
     try {
@@ -974,17 +1026,18 @@ export class OrderService {
       let categoryServiceIds: string[] = [];
 
       if (dto.categoryId) {
-        const categoryServices = await this.prisma.droneServiceCategory.findMany({
-          where: {
-            categoryId: dto.categoryId,
-          },
-          select: {
-            serviceId: true,
-          },
-        });
+        const categoryServices =
+          await this.prisma.droneServiceCategory.findMany({
+            where: {
+              categoryId: dto.categoryId,
+            },
+            select: {
+              serviceId: true,
+            },
+          });
 
         categoryServiceIds = categoryServices
-          .map(cs => cs.serviceId)
+          .map((cs) => cs.serviceId)
           .filter(Boolean) as string[];
       }
 
@@ -994,17 +1047,18 @@ export class OrderService {
       let industryServiceIds: string[] = [];
 
       if (dto.industryId) {
-        const industryServices = await this.prisma.droneServiceIndustry.findMany({
-          where: {
-            industryId: dto.industryId,
-          },
-          select: {
-            serviceId: true,
-          },
-        });
+        const industryServices =
+          await this.prisma.droneServiceIndustry.findMany({
+            where: {
+              industryId: dto.industryId,
+            },
+            select: {
+              serviceId: true,
+            },
+          });
 
         industryServiceIds = industryServices
-          .map(is => is.serviceId)
+          .map((is) => is.serviceId)
           .filter(Boolean) as string[];
       }
 
@@ -1017,22 +1071,22 @@ export class OrderService {
 
         ...(dto.fromDate || dto.toDate
           ? {
-            createdAt: {
-              ...(dto.fromDate && { gte: new Date(dto.fromDate) }),
-              ...(dto.toDate && { lte: new Date(dto.toDate) }),
-            },
-          }
+              createdAt: {
+                ...(dto.fromDate && { gte: new Date(dto.fromDate) }),
+                ...(dto.toDate && { lte: new Date(dto.toDate) }),
+              },
+            }
           : {}),
 
         ...(dto.categoryId || dto.industryId
           ? {
-            serviceId: {
-              in: [
-                ...(dto.categoryId ? categoryServiceIds : []),
-                ...(dto.industryId ? industryServiceIds : []),
-              ],
-            },
-          }
+              serviceId: {
+                in: [
+                  ...(dto.categoryId ? categoryServiceIds : []),
+                  ...(dto.industryId ? industryServiceIds : []),
+                ],
+              },
+            }
           : {}),
 
         ...(dto.search && {
@@ -1097,14 +1151,15 @@ export class OrderService {
         },
       });
 
-      const total = dto.search || dto.categoryId || dto.industryId
-        ? (
-          await this.prisma.order.findMany({
-            where,
-            select: { id: true },
-          })
-        ).length
-        : await this.prisma.order.count({ where });
+      const total =
+        dto.search || dto.categoryId || dto.industryId
+          ? (
+              await this.prisma.order.findMany({
+                where,
+                select: { id: true },
+              })
+            ).length
+          : await this.prisma.order.count({ where });
 
       return {
         total,
@@ -1117,7 +1172,6 @@ export class OrderService {
       throw error;
     }
   }
-
 
   async exportOrderReportCsv(
     dto: AdminOrderReportDto,
@@ -1132,22 +1186,24 @@ export class OrderService {
       }
 
       writer.write('\uFEFF');
-      writer.write([
-        'orderNo',
-        'orderDate',
-        'status',
-        'serviceName',
-        'vendorName',
-        'customerName',
-        'vendorAmount',
-        'dgCharges',
-        'totalAmount',
-        'gstAmount',
-        'paymentMethod',
-        'transactionId',
-        // 'vendorInvoiceId',
-        // 'customerInvoiceId',
-      ].join(',') + '\n');
+      writer.write(
+        [
+          'orderNo',
+          'orderDate',
+          'status',
+          'serviceName',
+          'vendorName',
+          'customerName',
+          'vendorAmount',
+          'dgCharges',
+          'totalAmount',
+          'gstAmount',
+          'paymentMethod',
+          'transactionId',
+          // 'vendorInvoiceId',
+          // 'customerInvoiceId',
+        ].join(',') + '\n',
+      );
 
       /* --------------------------------------------------
          3️⃣ Resolve category → serviceIds
@@ -1160,7 +1216,7 @@ export class OrderService {
           select: { serviceId: true },
         });
 
-        categoryServiceIds = rows.map(r => r.serviceId!).filter(Boolean);
+        categoryServiceIds = rows.map((r) => r.serviceId!).filter(Boolean);
       }
 
       /* --------------------------------------------------
@@ -1174,7 +1230,7 @@ export class OrderService {
           select: { serviceId: true },
         });
 
-        industryServiceIds = rows.map(r => r.serviceId!).filter(Boolean);
+        industryServiceIds = rows.map((r) => r.serviceId!).filter(Boolean);
       }
 
       /* --------------------------------------------------
@@ -1185,22 +1241,22 @@ export class OrderService {
 
         ...(fromDate || toDate
           ? {
-            createdAt: {
-              ...(fromDate && { gte: fromDate }),
-              ...(toDate && { lte: toDate }),
-            },
-          }
+              createdAt: {
+                ...(fromDate && { gte: fromDate }),
+                ...(toDate && { lte: toDate }),
+              },
+            }
           : {}),
 
         ...(dto.categoryId || dto.industryId
           ? {
-            serviceId: {
-              in: [
-                ...(dto.categoryId ? categoryServiceIds : []),
-                ...(dto.industryId ? industryServiceIds : []),
-              ],
-            },
-          }
+              serviceId: {
+                in: [
+                  ...(dto.categoryId ? categoryServiceIds : []),
+                  ...(dto.industryId ? industryServiceIds : []),
+                ],
+              },
+            }
           : {}),
 
         ...(dto.search && {
@@ -1284,25 +1340,25 @@ export class OrderService {
         if (!rows.length) break;
 
         for (const o of rows) {
-          const gstTotal =
-            Number(o.vendor_gst ?? 0) + Number(o.dg_gst ?? 0);
+          const gstTotal = Number(o.vendor_gst ?? 0) + Number(o.dg_gst ?? 0);
 
-          const row = [
-            escapeCsv(o.orderNo),
-            escapeCsv(o.createdAt.toISOString()),
-            escapeCsv(o.status),
-            escapeCsv(o.service_name),
-            escapeCsv(o.vendor?.comp_name),
-            escapeCsv(o.customer?.comp_name),
-            String(o.vendor_total ?? 0),
-            String(o.dg_price ?? 0),
-            String(o.customer_total ?? 0),
-            String(gstTotal),
-            escapeCsv(o.payment_method),
-            escapeCsv(o.transactionId),
-            // escapeCsv(o.vendor_invoice_id),
-            // escapeCsv(o.customer_invoice_id),
-          ].join(',') + '\n';
+          const row =
+            [
+              escapeCsv(o.orderNo),
+              escapeCsv(o.createdAt.toISOString()),
+              escapeCsv(o.status),
+              escapeCsv(o.service_name),
+              escapeCsv(o.vendor?.comp_name),
+              escapeCsv(o.customer?.comp_name),
+              String(o.vendor_total ?? 0),
+              String(o.dg_price ?? 0),
+              String(o.customer_total ?? 0),
+              String(gstTotal),
+              escapeCsv(o.payment_method),
+              escapeCsv(o.transactionId),
+              // escapeCsv(o.vendor_invoice_id),
+              // escapeCsv(o.customer_invoice_id),
+            ].join(',') + '\n';
 
           writer.write(row);
         }
@@ -1320,13 +1376,16 @@ export class OrderService {
     }
   }
 
-
   // Vendor submits the OTP the customer received when they paid this
   // milestone. If the OTP matches, milestone flips OTP_ISSUED → COMPLETED.
   // When the last remaining milestone completes, the parent Order flips
   // to COMPLETED automatically — retiring the legacy order-level OTP flow
   // on V2-orders without removing the old endpoint.
-  async redeemMilestoneOtp(milestoneId: string, userId: string, dto: RedeemMilestoneOtpDto) {
+  async redeemMilestoneOtp(
+    milestoneId: string,
+    userId: string,
+    dto: RedeemMilestoneOtpDto,
+  ) {
     this.ensureV2Enabled();
 
     const milestone = await this.prisma.orderMilestone.findUnique({
@@ -1384,7 +1443,11 @@ export class OrderService {
       );
 
       let orderCompleted = false;
-      if (allTerminal && !anyRefunded && milestone.order.status !== 'COMPLETED') {
+      if (
+        allTerminal &&
+        !anyRefunded &&
+        milestone.order.status !== 'COMPLETED'
+      ) {
         await tx.order.update({
           where: { id: milestone.order.id },
           data: { status: 'COMPLETED' as any },
@@ -1398,7 +1461,9 @@ export class OrderService {
     // Release the Route on_hold transfer outside the tx. If Razorpay is
     // unreachable, the milestone stays COMPLETED but a FAILED VendorPayout
     // row is written so admin can retry without data loss.
-    const release = await this.paymentService.releaseMilestoneTransfer(milestone.id);
+    const release = await this.paymentService.releaseMilestoneTransfer(
+      milestone.id,
+    );
 
     // If this redemption just closed out the last milestone, pre-generate
     // both invoice PDFs so the customer/vendor see them immediately.
@@ -1417,11 +1482,14 @@ export class OrderService {
     };
   }
 
-
   // Customer raises a dispute on a milestone they've paid for but not
   // yet accepted (status=OTP_ISSUED). Freezes the milestone in DISPUTED —
   // no further vendor/customer action until admin resolves in PR #6.
-  async disputeMilestone(milestoneId: string, userId: string, dto: DisputeMilestoneDto) {
+  async disputeMilestone(
+    milestoneId: string,
+    userId: string,
+    dto: DisputeMilestoneDto,
+  ) {
     this.ensureV2Enabled();
 
     const milestone = await this.prisma.orderMilestone.findUnique({
@@ -1458,7 +1526,6 @@ export class OrderService {
       status: MilestoneStatus.DISPUTED,
     };
   }
-
 
   // Admin resolves a dispute. FAVOR_VENDOR releases the held transfer to the
   // vendor; REFUND reverses the transfer and refunds the customer. Either way
@@ -1501,7 +1568,9 @@ export class OrderService {
             m.status === MilestoneStatus.COMPLETED ||
             m.status === MilestoneStatus.REFUNDED,
         );
-        const anyRefunded = siblings.some((m) => m.status === MilestoneStatus.REFUNDED);
+        const anyRefunded = siblings.some(
+          (m) => m.status === MilestoneStatus.REFUNDED,
+        );
 
         let orderCompleted = false;
         if (allTerminal && !anyRefunded) {
@@ -1514,7 +1583,9 @@ export class OrderService {
         return { orderCompleted };
       });
 
-      const release = await this.paymentService.releaseMilestoneTransfer(milestone.id);
+      const release = await this.paymentService.releaseMilestoneTransfer(
+        milestone.id,
+      );
 
       // If admin's FAVOR_VENDOR ruling closed the order, pre-generate invoices.
       if (result.orderCompleted) {
@@ -1542,7 +1613,9 @@ export class OrderService {
       },
     });
 
-    const refund = await this.paymentService.reverseMilestoneTransferAndRefund(milestone.id);
+    const refund = await this.paymentService.reverseMilestoneTransferAndRefund(
+      milestone.id,
+    );
 
     return {
       success: true,
@@ -1555,5 +1628,4 @@ export class OrderService {
       ...(refund.warnings.length ? { warnings: refund.warnings } : {}),
     };
   }
-
 }

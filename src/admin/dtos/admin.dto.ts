@@ -1,14 +1,14 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString } from 'class-validator';
 
-export class QueryFilterDto{
-    @ApiProperty()
-    @IsString()
-    @IsNotEmpty()
-    month: string
+export class QueryFilterDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  month: string;
 
-    @ApiProperty()
-    @IsString()
-    @IsNotEmpty()
-    year: string
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  year: string;
 }

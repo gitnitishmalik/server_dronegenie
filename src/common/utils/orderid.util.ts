@@ -4,7 +4,7 @@ export function generateOrderId() {
 
   // Combine and encode in base36 with some salt
   const base = `${timestamp}${random}`;
-  
+
   // Convert to base36 and shuffle for obfuscation
   const shuffled = base
     .split('')

@@ -8,24 +8,28 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateCustomerDto, QueryFilterDto, UpdateCustomerProfileDto } from './dtos';
+import {
+  CreateCustomerDto,
+  QueryFilterDto,
+  UpdateCustomerProfileDto,
+} from './dtos';
 import * as bcrypt from 'bcrypt';
-import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { Prisma } from '@prisma/client';
-import { use } from 'passport';
 import { OrderStatus } from 'src/common/enums';
 
 @Injectable()
 export class CustomerService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   // ---------- helpers ----------
   private isValidPAN(pan: string): boolean {
     return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
   }
   private isValidGST(gst: string): boolean {
-    return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gst);
+    return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+      gst,
+    );
   }
   private normalizePAN(pan: string): string {
     return pan.toUpperCase().trim();
@@ -35,10 +39,15 @@ export class CustomerService {
   }
 
   private handleUniqueError(error: any) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       // Prisma sends meta.target like ['email'] or ['GST'] or index name
       const target = (error.meta && (error.meta as any).target) || '';
-      const targetStr = Array.isArray(target) ? target.join(',').toLowerCase() : String(target).toLowerCase();
+      const targetStr = Array.isArray(target)
+        ? target.join(',').toLowerCase()
+        : String(target).toLowerCase();
 
       if (targetStr.includes('email')) {
         throw new BadRequestException('Email already exists');
@@ -51,7 +60,9 @@ export class CustomerService {
       } else if (targetStr.includes('representative_email')) {
         throw new BadRequestException('Representative email already exists');
       } else {
-        throw new BadRequestException('Duplicate value — one of the fields must be unique');
+        throw new BadRequestException(
+          'Duplicate value — one of the fields must be unique',
+        );
       }
     }
 
@@ -72,11 +83,15 @@ export class CustomerService {
       dto.PAN = this.normalizePAN(dto.PAN);
       dto.GST = this.normalizeGST(dto.GST);
 
-      if (!this.isValidPAN(dto.PAN)) throw new BadRequestException('Invalid PAN Number');
-      if (!this.isValidGST(dto.GST)) throw new BadRequestException('Invalid GST Number.');
+      if (!this.isValidPAN(dto.PAN))
+        throw new BadRequestException('Invalid PAN Number');
+      if (!this.isValidGST(dto.GST))
+        throw new BadRequestException('Invalid GST Number.');
 
       // Prepare values used inside transaction
-      const wantsToAttachToUser = Boolean(dto.userId && dto.userId.trim().length > 0);
+      const wantsToAttachToUser = Boolean(
+        dto.userId && dto.userId.trim().length > 0,
+      );
 
       const result = await this.prisma.$transaction(async (tx) => {
         let userId: string;
@@ -87,22 +102,34 @@ export class CustomerService {
           if (!user) throw new NotFoundException('User not found');
 
           // Prevent creating a customer if the user already has a customer profile
-          const existingCustomer = await tx.customer.findUnique({ where: { userId: user.id } });
-          if (existingCustomer) throw new ConflictException('This user already has a customer profile.');
+          const existingCustomer = await tx.customer.findUnique({
+            where: { userId: user.id },
+          });
+          if (existingCustomer)
+            throw new ConflictException(
+              'This user already has a customer profile.',
+            );
 
           // Update role to CUSTOMER (if needed)
-          await tx.user.update({ where: { id: user.id }, data: { roles: { set: ['CUSTOMER'] } } });
+          await tx.user.update({
+            where: { id: user.id },
+            data: { roles: { set: ['CUSTOMER'] } },
+          });
 
           userId = user.id;
         } else {
           // 2) Create a fresh user and attach the customer to it
           // Validate required user fields are present in DTO
           if (!dto.name || !dto.email || !dto.phone || !dto.password) {
-            throw new BadRequestException('name, email, phone and password are required when creating a new user');
+            throw new BadRequestException(
+              'name, email, phone and password are required when creating a new user',
+            );
           }
 
           // Hash password
-          const hashedPassword = dto.password ? await bcrypt.hash(dto.password, 10) : '';
+          const hashedPassword = dto.password
+            ? await bcrypt.hash(dto.password, 10)
+            : '';
 
           // Create user (fail if unique constraints violated)
           const createdUser = await tx.user.create({
@@ -142,7 +169,9 @@ export class CustomerService {
         const createdCustomer = await tx.customer.create({
           data: customerCreateData,
           include: {
-            user: { select: { id: true, email: true, phone: true, name: true } },
+            user: {
+              select: { id: true, email: true, phone: true, name: true },
+            },
           },
         });
 
@@ -152,7 +181,10 @@ export class CustomerService {
       return result;
     } catch (error: any) {
       // Prisma unique constraint -> user-friendly messages using your handler
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         // If handleUniqueError supports a mapping param you showed earlier, you can call it accordingly.
         // I will call the handler you provided (which checks meta.target) so it throws friendly errors.
         this.handleUniqueError(error);
@@ -164,13 +196,14 @@ export class CustomerService {
     }
   }
 
-
   // ---------- read ----------
   async getCustomerById(id: string) {
     const customer = await this.prisma.customer.findUnique({
       where: { id },
       include: {
-        user: { select: { name: true, email: true, phone: true, isActive: true } },
+        user: {
+          select: { name: true, email: true, phone: true, isActive: true },
+        },
         BankDetails: {
           select: {
             paymentMethod: true,
@@ -187,7 +220,6 @@ export class CustomerService {
     return customer;
   }
 
-
   async getCustomerByUserId(userId: string) {
     try {
       const user = await this.prisma.user.findUnique({
@@ -195,30 +227,29 @@ export class CustomerService {
         select: {
           id: true,
           name: true,
-          customer: true
-        }
-      })
+          customer: true,
+        },
+      });
 
-      if (!user) throw new NotFoundException("User not found");
+      if (!user) throw new NotFoundException('User not found');
 
       return user;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       console.log(error);
 
-      throw new InternalServerErrorException("Internal server error")
+      throw new InternalServerErrorException('Internal server error');
     }
   }
-
 
   async profileUpdateCustomer(userId: string, dto: UpdateCustomerProfileDto) {
     try {
       // Basic guard
       if (!userId) throw new BadRequestException('userId is required');
       const user = await this.prisma.user.findUnique({
-        where: { id: userId }
-      })
-      if (!user) throw new NotFoundException("User not found")
+        where: { id: userId },
+      });
+      if (!user) throw new NotFoundException('User not found');
 
       // Build user update payload only with provided fields
       const userUpdateData: any = {};
@@ -226,25 +257,36 @@ export class CustomerService {
 
       // Build customer update payload only with provided fields
       const customerUpdateData: any = {};
-      if (dto.comp_name !== undefined) customerUpdateData.comp_name = dto.comp_name;
-      if (dto.comp_type !== undefined) customerUpdateData.comp_type = dto.comp_type;
+      if (dto.comp_name !== undefined)
+        customerUpdateData.comp_name = dto.comp_name;
+      if (dto.comp_type !== undefined)
+        customerUpdateData.comp_type = dto.comp_type;
       if (dto.address !== undefined) customerUpdateData.address = dto.address;
       if (dto.website !== undefined) customerUpdateData.website = dto.website;
-      if (dto.representative !== undefined) customerUpdateData.representative = dto.representative;
-      if (dto.representative_email !== undefined) customerUpdateData.representative_email = dto.representative_email;
-      if (dto.representative_phone !== undefined) customerUpdateData.representative_phone = dto.representative_phone;
+      if (dto.representative !== undefined)
+        customerUpdateData.representative = dto.representative;
+      if (dto.representative_email !== undefined)
+        customerUpdateData.representative_email = dto.representative_email;
+      if (dto.representative_phone !== undefined)
+        customerUpdateData.representative_phone = dto.representative_phone;
       if (dto.GST !== undefined) customerUpdateData.GST = dto.GST;
       if (dto.PAN !== undefined) customerUpdateData.PAN = dto.PAN;
 
       // Nothing to update?
-      if (Object.keys(userUpdateData).length === 0 && Object.keys(customerUpdateData).length === 0) {
+      if (
+        Object.keys(userUpdateData).length === 0 &&
+        Object.keys(customerUpdateData).length === 0
+      ) {
         throw new BadRequestException('No fields provided to update');
       }
 
       const updated = await this.prisma.$transaction(async (tx) => {
         // Ensure customer profile exists
         const customer = await tx.customer.findUnique({ where: { userId } });
-        if (!customer) throw new NotFoundException('Customer profile not found for this user');
+        if (!customer)
+          throw new NotFoundException(
+            'Customer profile not found for this user',
+          );
 
         // Update user if needed
         if (Object.keys(userUpdateData).length > 0) {
@@ -260,14 +302,22 @@ export class CustomerService {
           updatedCustomer = await tx.customer.update({
             where: { userId },
             data: customerUpdateData,
-            include: { user: { select: { id: true, email: true, phone: true, name: true } } },
+            include: {
+              user: {
+                select: { id: true, email: true, phone: true, name: true },
+              },
+            },
           });
         } else {
           // include user selection to return consistent shape
-          updatedCustomer = await tx.customer.findUnique({
+          updatedCustomer = (await tx.customer.findUnique({
             where: { userId },
-            include: { user: { select: { id: true, email: true, phone: true, name: true } } },
-          }) as any;
+            include: {
+              user: {
+                select: { id: true, email: true, phone: true, name: true },
+              },
+            },
+          })) as any;
         }
 
         return updatedCustomer;
@@ -276,7 +326,10 @@ export class CustomerService {
       return { message: 'Profile updated successfully', customer: updated };
     } catch (error: any) {
       // convert Prisma unique constraint into friendly messages
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         this.handleUniqueError(error);
       }
 
@@ -285,7 +338,6 @@ export class CustomerService {
       throw new InternalServerErrorException('Internal server error');
     }
   }
-
 
   // ---------- update ----------
   async updateCustomer(id: string, dto: Partial<CreateCustomerDto>) {
@@ -305,20 +357,25 @@ export class CustomerService {
     if (dto.comp_type !== undefined) customerUpdate.comp_type = dto.comp_type;
     if (dto.address !== undefined) customerUpdate.address = dto.address;
     if (dto.website !== undefined) customerUpdate.website = dto.website;
-    if (dto.representative !== undefined) customerUpdate.representative = dto.representative;
-    if (dto.representative_email !== undefined) customerUpdate.representative_email = dto.representative_email;
-    if (dto.representative_phone !== undefined) customerUpdate.representative_phone = dto.representative_phone;
+    if (dto.representative !== undefined)
+      customerUpdate.representative = dto.representative;
+    if (dto.representative_email !== undefined)
+      customerUpdate.representative_email = dto.representative_email;
+    if (dto.representative_phone !== undefined)
+      customerUpdate.representative_phone = dto.representative_phone;
 
     // Normalize + validate PAN/GST only if provided
     if (typeof dto.PAN === 'string') {
       const pan = this.normalizePAN(dto.PAN);
-      if (!this.isValidPAN(pan)) throw new BadRequestException('Invalid PAN number format');
+      if (!this.isValidPAN(pan))
+        throw new BadRequestException('Invalid PAN number format');
       customerUpdate.PAN = pan;
     }
 
     if (typeof dto.GST === 'string') {
       const gst = this.normalizeGST(dto.GST);
-      if (!this.isValidGST(gst)) throw new BadRequestException('Invalid GST number format');
+      if (!this.isValidGST(gst))
+        throw new BadRequestException('Invalid GST number format');
       customerUpdate.GST = gst;
     }
 
@@ -327,20 +384,24 @@ export class CustomerService {
       customerUpdate.isTermsAccepted = (dto as any).isTermsAccepted;
     }
 
-
     // Build user update payload (if admin provided user-related fields)
     const userUpdate: any = {};
     if (dto.name !== undefined) userUpdate.name = dto.name;
     if (dto.email !== undefined) userUpdate.email = dto.email;
     if (dto.phone !== undefined) userUpdate.phone = dto.phone;
-    if (dto.password !== undefined && dto.password !== null && dto.password !== '') {
+    if (
+      dto.password !== undefined &&
+      dto.password !== null &&
+      dto.password !== ''
+    ) {
       // hash the password
-      userUpdate.password = dto.password ? await bcrypt.hash(dto.password, 10) : '';
+      userUpdate.password = dto.password
+        ? await bcrypt.hash(dto.password, 10)
+        : '';
     }
     if (typeof (dto as any).isActive === 'boolean') {
       userUpdate.isActive = (dto as any).isActive;
     }
-
 
     // Prevent user re-link via this method (optional safety)
     if ((dto as any).userId && (dto as any).userId !== existing.userId) {
@@ -348,7 +409,10 @@ export class CustomerService {
     }
 
     // If nothing to update at all -> error
-    if (Object.keys(customerUpdate).length === 0 && Object.keys(userUpdate).length === 0) {
+    if (
+      Object.keys(customerUpdate).length === 0 &&
+      Object.keys(userUpdate).length === 0
+    ) {
       throw new BadRequestException('No valid fields provided to update');
     }
 
@@ -374,7 +438,9 @@ export class CustomerService {
           if (conflictUser) {
             // If a conflicting user exists, throw a friendly conflict
             // You might want to check conflictUser.waitForOtp to allow special handling; we keep it simple
-            throw new ConflictException('Email or phone already in use by another account.');
+            throw new ConflictException(
+              'Email or phone already in use by another account.',
+            );
           }
         }
 
@@ -391,14 +457,22 @@ export class CustomerService {
           updatedCustomer = await tx.customer.update({
             where: { id },
             data: customerUpdate,
-            include: { user: { select: { id: true, email: true, phone: true, name: true } } },
+            include: {
+              user: {
+                select: { id: true, email: true, phone: true, name: true },
+              },
+            },
           });
         } else {
           // still include user info for consistent return shape
-          updatedCustomer = await tx.customer.findUnique({
+          updatedCustomer = (await tx.customer.findUnique({
             where: { id },
-            include: { user: { select: { id: true, email: true, phone: true, name: true } } },
-          }) as any;
+            include: {
+              user: {
+                select: { id: true, email: true, phone: true, name: true },
+              },
+            },
+          })) as any;
         }
 
         return updatedCustomer;
@@ -407,7 +481,10 @@ export class CustomerService {
       return { message: 'Customer updated successfully', customer: updated };
     } catch (error: any) {
       // Translate prisma unique constraint errors to friendly messages
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         this.handleUniqueError(error);
       }
 
@@ -416,8 +493,6 @@ export class CustomerService {
       throw new InternalServerErrorException('Unable to update customer');
     }
   }
-
-
 
   // ---------- delete ----------
   async deleteCustomer(id: string, removeUserToo = true) {
@@ -441,13 +516,23 @@ export class CustomerService {
     // A: If there are bid requests, first remove Orders that reference those bid requests
     if (bidReqIds.length) {
       // delete orders that reference these bid requests (critical to avoid P2014)
-      ops.push(this.prisma.order.deleteMany({ where: { bidReqId: { in: bidReqIds } } }));
+      ops.push(
+        this.prisma.order.deleteMany({
+          where: { bidReqId: { in: bidReqIds } },
+        }),
+      );
 
       // delete any bid replies for these bid requests
-      ops.push(this.prisma.bidReply.deleteMany({ where: { bidReqId: { in: bidReqIds } } }));
+      ops.push(
+        this.prisma.bidReply.deleteMany({
+          where: { bidReqId: { in: bidReqIds } },
+        }),
+      );
 
       // now safe to delete the bid requests themselves
-      ops.push(this.prisma.bidRequest.deleteMany({ where: { id: { in: bidReqIds } } }));
+      ops.push(
+        this.prisma.bidRequest.deleteMany({ where: { id: { in: bidReqIds } } }),
+      );
     }
 
     // B: delete orders directly owned by this customer (if any remain)
@@ -471,17 +556,17 @@ export class CustomerService {
     } catch (err) {
       console.error('Failed to delete customer cascade', err);
       // If it's a Prisma relation error, bubble a clear message (optional)
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2014') {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2014'
+      ) {
         throw new InternalServerErrorException(
-          'Unable to delete customer due to dependent records. Please delete related orders first or contact support.'
+          'Unable to delete customer due to dependent records. Please delete related orders first or contact support.',
         );
       }
       throw new InternalServerErrorException('Failed to delete customer');
     }
   }
-
-
-
 
   // ---------- list ----------
   // @Pagination([
@@ -601,7 +686,7 @@ export class CustomerService {
           include: {
             user: true,
             BankDetails: true,
-          }
+          },
         }),
         this.prisma.customer.count({ where }),
       ]);
@@ -620,26 +705,42 @@ export class CustomerService {
     }
   }
 
-
-
   // ---------- summary ----------
   async summary(id: string, dto: QueryFilterDto) {
-    const customer = await this.prisma.customer.findUnique({ where: { userId: id } });
+    const customer = await this.prisma.customer.findUnique({
+      where: { userId: id },
+    });
     if (!customer) throw new NotFoundException('Customer Not Found');
 
     const currentDate = new Date();
-    const selectedMonth = dto?.month ? parseInt(dto.month) : currentDate.getMonth() + 1;
-    const selectedYear = dto?.year ? parseInt(dto.year) : currentDate.getFullYear();
+    const selectedMonth = dto?.month
+      ? parseInt(dto.month)
+      : currentDate.getMonth() + 1;
+    const selectedYear = dto?.year
+      ? parseInt(dto.year)
+      : currentDate.getFullYear();
 
     const startDate = new Date(selectedYear, selectedMonth - 1, 1);
     const endDate = new Date(selectedYear, selectedMonth, 1);
 
-    const [totalOrders, totalBidReq, totalOpenBidReq, totalClosedBidReq, totalSpends] = await Promise.all([
+    const [
+      totalOrders,
+      totalBidReq,
+      totalOpenBidReq,
+      totalClosedBidReq,
+      totalSpends,
+    ] = await Promise.all([
       this.prisma.order.count({
-        where: { customerId: customer.id, createdAt: { gte: startDate, lt: endDate } },
+        where: {
+          customerId: customer.id,
+          createdAt: { gte: startDate, lt: endDate },
+        },
       }),
       this.prisma.bidRequest.count({
-        where: { customerId: customer.id, createdAt: { gte: startDate, lt: endDate } },
+        where: {
+          customerId: customer.id,
+          createdAt: { gte: startDate, lt: endDate },
+        },
       }),
       this.prisma.bidRequest.count({
         where: {
@@ -657,10 +758,16 @@ export class CustomerService {
       }),
       this.prisma.order.aggregate({
         where: { status: OrderStatus.COMPLETED },
-        _sum: { customer_total: true }
-      })
+        _sum: { customer_total: true },
+      }),
     ]);
 
-    return { totalOrders, totalBidReq, totalOpenBidReq, totalClosedBidReq, totalSpends: totalSpends._sum.customer_total };
+    return {
+      totalOrders,
+      totalBidReq,
+      totalOpenBidReq,
+      totalClosedBidReq,
+      totalSpends: totalSpends._sum.customer_total,
+    };
   }
 }

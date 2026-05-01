@@ -1,13 +1,15 @@
-import { Injectable, BadRequestException, NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { Pagination } from 'src/common/decorators/pagination.decorator';
-import { PaginationDto } from 'src/common/dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-
-
 
 @Injectable()
 export class VendorServiceService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async addServicesToVendor(id: string, serviceIds: string[]) {
     if (!serviceIds || serviceIds.length === 0) {
@@ -16,10 +18,10 @@ export class VendorServiceService {
 
     const vendor = await this.prisma.vendor.findUnique({
       where: { userId: id },
-    })
+    });
 
     if (!vendor) {
-      throw new NotFoundException("Vendor Not Found")
+      throw new NotFoundException('Vendor Not Found');
     }
 
     const existingVendorServices = await this.prisma.vendorService.findMany({
@@ -29,16 +31,18 @@ export class VendorServiceService {
       },
     });
 
-    const existingServiceIds = existingVendorServices.map(vs => vs.serviceId);
-    const newServiceIds = serviceIds.filter(id => !existingServiceIds.includes(id));
-
+    const existingServiceIds = existingVendorServices.map((vs) => vs.serviceId);
+    const newServiceIds = serviceIds.filter(
+      (id) => !existingServiceIds.includes(id),
+    );
 
     if (newServiceIds.length === 0) {
-      throw new ConflictException('All selected services are already associated with this vendor');
+      throw new ConflictException(
+        'All selected services are already associated with this vendor',
+      );
     }
 
-
-    const vendorServicesData = newServiceIds.map(serviceId => ({
+    const vendorServicesData = newServiceIds.map((serviceId) => ({
       vendorId: vendor.id,
       serviceId,
     }));
@@ -52,9 +56,9 @@ export class VendorServiceService {
 
   @Pagination(['vendorId', 'serviceId'])
   async getAll(
-    dto: PaginationDto,
-    modelName: string,
-    queryOptions: any,
+    _dto?: any,
+    _modelName?: string,
+    _queryOptions?: any,
   ): Promise<{
     total: number;
     page: number;
@@ -71,7 +75,7 @@ export class VendorServiceService {
 
   async updateVendorServices(userId: string, serviceIds: string[]) {
     console.log(serviceIds);
-    
+
     if (!serviceIds || serviceIds.length === 0) {
       throw new BadRequestException('At least one service ID is required');
     }
@@ -88,17 +92,17 @@ export class VendorServiceService {
       select: { serviceId: true },
     });
 
-    const currentServiceIds = new Set(currentServices.map(s => s.serviceId));
+    const currentServiceIds = new Set(currentServices.map((s) => s.serviceId));
     const incomingServiceIds = new Set(serviceIds);
 
     // 3️⃣ Services to DELETE (exist in DB but not in request)
     const serviceIdsToDelete = [...currentServiceIds].filter(
-      id => !incomingServiceIds.has(id),
+      (id) => !incomingServiceIds.has(id),
     );
 
     // 4️⃣ Services to ADD (exist in request but not in DB)
     const serviceIdsToAdd = serviceIds.filter(
-      id => !currentServiceIds.has(id),
+      (id) => !currentServiceIds.has(id),
     );
 
     // 5️⃣ Validate services to add
@@ -107,16 +111,18 @@ export class VendorServiceService {
       select: { id: true },
     });
 
-    const validServiceIds = validServices.map(s => s.id);
-    const invalidIds = serviceIdsToAdd.filter(id => !validServiceIds.includes(id));
+    const validServiceIds = validServices.map((s) => s.id);
+    const invalidIds = serviceIdsToAdd.filter(
+      (id) => !validServiceIds.includes(id),
+    );
 
-    const vendorServicesToCreate = validServiceIds.map(serviceId => ({
+    const vendorServicesToCreate = validServiceIds.map((serviceId) => ({
       vendorId: vendor.id,
       serviceId,
     }));
 
     // 6️⃣ Transaction: delete + create
-    await this.prisma.$transaction(async tx => {
+    await this.prisma.$transaction(async (tx) => {
       if (serviceIdsToDelete.length > 0) {
         await tx.vendorService.deleteMany({
           where: {
@@ -143,7 +149,4 @@ export class VendorServiceService {
 
     return response;
   }
-
-
-
 }

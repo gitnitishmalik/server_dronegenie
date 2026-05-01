@@ -1,6 +1,16 @@
 import { Transform, Type } from 'class-transformer';
-import { ArrayUnique, IsArray, IsEnum, IsInt, IsMongoId, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
-import {IndustryStatus} from '@prisma/client'
+import {
+  ArrayUnique,
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsMongoId,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
+import { IndustryStatus } from '@prisma/client';
 
 export class CreateIndustryDto {
   @IsString()
@@ -20,21 +30,20 @@ export class CreateIndustryDto {
 
   @IsEnum(IndustryStatus)
   @IsOptional()
-  status?: IndustryStatus
+  status?: IndustryStatus;
 
   @IsOptional()
   @IsString()
-  metaTitle?: string
+  metaTitle?: string;
 
   @IsOptional()
   @IsString()
-  metaDescription?: string
+  metaDescription?: string;
 
   @IsOptional()
   @IsString()
-  metaKeyword?: string
+  metaKeyword?: string;
 }
-
 
 export class UpdateIndustryDto {
   @IsOptional()
@@ -55,21 +64,20 @@ export class UpdateIndustryDto {
 
   @IsEnum(IndustryStatus)
   @IsOptional()
-  status?: IndustryStatus
+  status?: IndustryStatus;
 
   @IsOptional()
   @IsString()
-  metaTitle?: string
+  metaTitle?: string;
 
   @IsOptional()
   @IsString()
-  metaDescription?: string
+  metaDescription?: string;
 
   @IsOptional()
   @IsString()
-  metaKeyword?: string
+  metaKeyword?: string;
 }
-
 
 export class UpdateIndustryServicesDto {
   @IsMongoId()
@@ -88,7 +96,6 @@ export class UpdateIndustryServicesDto {
   removeServiceIds?: string[];
 }
 
-
 export class UpdateIndustryPropertiesDto {
   @IsString()
   industryId: string;
@@ -105,9 +112,3 @@ export class UpdateIndustryPropertiesDto {
   @IsMongoId({ each: true })
   removePropertyIds?: string[];
 }
-
-
-
-
-
-

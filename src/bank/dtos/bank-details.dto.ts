@@ -1,11 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { PaymentMethod } from '@prisma/client';
-import {
-  IsEnum,
-  IsOptional,
-  IsString,
-  ValidateIf,
-} from 'class-validator';
+import { IsEnum, IsOptional, IsString, ValidateIf } from 'class-validator';
 
 export class CreateBankDetailsDto {
   @ApiProperty({
@@ -17,7 +12,8 @@ export class CreateBankDetailsDto {
   vendorId?: string;
 
   @ApiProperty({
-    description: 'Customer ID (optional, provide either vendorId or customerId)',
+    description:
+      'Customer ID (optional, provide either vendorId or customerId)',
     required: false,
   })
   @IsOptional()

@@ -1,22 +1,42 @@
-
-import { ForbiddenException, Injectable, ConflictException, NotFoundException, BadRequestException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { jwtConstants } from './constants';
-import { OtpVerificationDto, SignInDto, SignUpDto, UpdateUserDto, ForgotPasswordDto, ResetPasswordDto, AdminUpdateUserDto, ResetForgotPasswordDto, CustomerSignupDto, VendorSignupAllDto, ResendOtpDto, ChangePhoneDto } from './dto';
+import {
+  OtpVerificationDto,
+  SignInDto,
+  SignUpDto,
+  UpdateUserDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  AdminUpdateUserDto,
+  ResetForgotPasswordDto,
+  CustomerSignupDto,
+  VendorSignupAllDto,
+  ResendOtpDto,
+  ChangePhoneDto,
+} from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CompanyType, Prisma, User, UserRole } from '@prisma/client';
 import { JwtPayload, Tokens } from './types';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from 'src/mail/mail.service';
-import { sendSMS } from '../common/utils/send-sms.util'
+import { sendSMS } from '../common/utils/send-sms.util';
 
 // Fixed bcrypt hash used to equalize timing on the no-user branch of signin.
 // Value is a bcrypt of a random string, cost 10 — matches the cost of real
 // user password hashes so the compare takes the same wall time either way.
 // This is not a secret (bcrypt hashes are safe to expose); its purpose is
 // purely to make the attacker's clock unhelpful.
-const DUMMY_BCRYPT_HASH = '$2b$10$CwTycUXWue0Thq9StjUM0uJ8.aA4mKkCnkmn7PL0eYQOyN4fL1S4u';
+const DUMMY_BCRYPT_HASH =
+  '$2b$10$CwTycUXWue0Thq9StjUM0uJ8.aA4mKkCnkmn7PL0eYQOyN4fL1S4u';
 
 @Injectable()
 export class AuthService {
@@ -25,32 +45,40 @@ export class AuthService {
     private jwtService: JwtService,
     private config: ConfigService,
     private mailService: MailService,
-  ) { }
+  ) {}
 
   private generateOTP(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
-
-  private mapUniqueErrorToMessage(e: Prisma.PrismaClientKnownRequestError): string {
+  private mapUniqueErrorToMessage(
+    e: Prisma.PrismaClientKnownRequestError,
+  ): string {
     // meta.target can be an index name or an array of fields depending on provider
     const target = (e.meta?.target ?? '') as string | string[];
 
     const includes = (needle: string) =>
-      Array.isArray(target) ? target.some(t => t.includes(needle)) : String(target).includes(needle);
+      Array.isArray(target)
+        ? target.some((t) => t.includes(needle))
+        : String(target).includes(needle);
 
     // Prioritize the most common collisions
-    if (includes('email') && includes('User')) return 'This email is already registered.';
-    if (includes('phone') && includes('User')) return 'An account with this mobile number already exists';
-    if (includes('representative_email')) return 'Representative email is already in use.';
-    if (includes('GST')) return 'GST number already exists. Please use a different one.';
-    if (includes('PAN')) return 'PAN number already exists. Please use a different one.';
-    if (includes('userId') || includes('Customer_userId')) return 'This user already has a customer profile.';
+    if (includes('email') && includes('User'))
+      return 'This email is already registered.';
+    if (includes('phone') && includes('User'))
+      return 'An account with this mobile number already exists';
+    if (includes('representative_email'))
+      return 'Representative email is already in use.';
+    if (includes('GST'))
+      return 'GST number already exists. Please use a different one.';
+    if (includes('PAN'))
+      return 'PAN number already exists. Please use a different one.';
+    if (includes('userId') || includes('Customer_userId'))
+      return 'This user already has a customer profile.';
 
     // Fallback generic
     return 'One or more unique fields already exist. Please use different values.';
   }
-
 
   private mapVendorUniqueErrorToMessage(error: any): string {
     const t = (error?.meta?.target as string[]) || [];
@@ -61,8 +89,10 @@ export class AuthService {
     if (idx.includes('phone')) return 'This phone number is already in use.';
 
     // Vendor uniques
-    if (idx.includes('userId')) return 'This user already has a vendor profile.';
-    if (idx.includes('representative_email')) return 'Representative email is already in use.';
+    if (idx.includes('userId'))
+      return 'This user already has a vendor profile.';
+    if (idx.includes('representative_email'))
+      return 'Representative email is already in use.';
     if (idx.includes('GST')) return 'GST number is already in use.';
     if (idx.includes('PAN')) return 'PAN number is already in use.';
 
@@ -71,7 +101,8 @@ export class AuthService {
       User_email_key: 'This email is already in use.',
       User_phone_key: 'This phone number is already in use.',
       Vendor_userId_key: 'This user already has a vendor profile.',
-      Vendor_representative_email_key: 'Representative email is already in use.',
+      Vendor_representative_email_key:
+        'Representative email is already in use.',
       Vendor_GST_key: 'GST number is already in use.',
       Vendor_PAN_key: 'PAN number is already in use.',
     };
@@ -81,14 +112,14 @@ export class AuthService {
     return 'Duplicate value violates a unique constraint.';
   }
 
-
-
   private isValidPAN(pan: string) {
     return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
   }
 
   private isValidGST(gst: string) {
-    return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gst);
+    return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+      gst,
+    );
   }
 
   // You already have these in your original code
@@ -96,7 +127,6 @@ export class AuthService {
   // private async getTokens(userId: string, email: string, roles: any[]) { /* ... */ }
   // private async updateRtHash(userId: string, rt: string, waitForOtp: boolean) { /* ... */ }
   // private async sendSMS(phone: string, otp: string) { /* ... your sendSMS(...) */ }
-
 
   private normalizeSignupPayload(dto: any) {
     // Accept nested: { user: {...}, customer: {...} }
@@ -124,7 +154,6 @@ export class AuthService {
 
     return { user, customer };
   }
-
 
   private normalizeVendorSignupPayload(dto: VendorSignupAllDto) {
     const u = {
@@ -154,7 +183,6 @@ export class AuthService {
 
     return { u, v, s };
   }
-
 
   // -------------------------
   // Signup Customer (single method, inline logic)
@@ -188,12 +216,14 @@ export class AuthService {
               expiriesIn,
               waitForOtp: true,
               rtHash: '',
-            }
+            },
           });
           userId = created.id;
         } else {
           if (!existing.waitForOtp) {
-            throw new ConflictException('Email already registered. Please login or recover your account.');
+            throw new ConflictException(
+              'Email already registered. Please login or recover your account.',
+            );
           }
           const updated = await tx.user.update({
             where: { id: existing.id },
@@ -205,20 +235,27 @@ export class AuthService {
               expiriesIn,
               isActive: false,
               waitForOtp: true,
-            }
+            },
           });
           userId = updated.id;
         }
 
-
-        const existingVendor = await tx.vendor.findUnique({ where: { userId } });
+        const existingVendor = await tx.vendor.findUnique({
+          where: { userId },
+        });
         if (existingVendor) {
-          throw new ConflictException('This user already has a vendor profile.');
+          throw new ConflictException(
+            'This user already has a vendor profile.',
+          );
         }
 
-        const existingCustomer = await tx.customer.findUnique({ where: { userId } });
+        const existingCustomer = await tx.customer.findUnique({
+          where: { userId },
+        });
         if (existingCustomer) {
-          throw new ConflictException('This user already has a customer profile.');
+          throw new ConflictException(
+            'This user already has a customer profile.',
+          );
         }
 
         // create customer (phone uniqueness enforced by DB)
@@ -236,7 +273,7 @@ export class AuthService {
             PAN: c.PAN,
             isTermsAccepted: c.isTermsAccepted,
           },
-          include: { user: { select: { id: true, email: true, phone: true } } }
+          include: { user: { select: { id: true, email: true, phone: true } } },
         });
 
         return { userId, newCustomer };
@@ -257,13 +294,16 @@ export class AuthService {
         throw new ConflictException(this.mapUniqueErrorToMessage(error));
       }
       // preserve friendly exceptions
-      if (error instanceof BadRequestException || error instanceof ConflictException || error instanceof NotFoundException) throw error;
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      )
+        throw error;
       console.error(error);
       throw new BadRequestException('Unable to complete signup.');
     }
   }
-
-
 
   // -------------------------
   // Signup Vendor (single method, inline logic)
@@ -273,17 +313,22 @@ export class AuthService {
 
     // Basic checks
     if (!u?.email || !u?.phone || !u?.password || !u?.name) {
-      throw new BadRequestException('Missing required user fields: name, email, phone, password.');
+      throw new BadRequestException(
+        'Missing required user fields: name, email, phone, password.',
+      );
     }
     if (!v) throw new BadRequestException('Missing vendor object.');
-    if (!s?.serviceIds?.length) throw new BadRequestException('At least one service ID is required.');
+    if (!s?.serviceIds?.length)
+      throw new BadRequestException('At least one service ID is required.');
     if (!v.PAN) throw new BadRequestException('PAN is required.');
     if (!v.GST) throw new BadRequestException('GST is required.');
     if (v.isTermsAccepted !== true) {
       throw new BadRequestException('You must accept the terms to continue.');
     }
-    if (!this.isValidPAN(v.PAN)) throw new BadRequestException('Invalid PAN number format.');
-    if (!this.isValidGST(v.GST)) throw new BadRequestException('Invalid GST number format.');
+    if (!this.isValidPAN(v.PAN))
+      throw new BadRequestException('Invalid PAN number format.');
+    if (!this.isValidGST(v.GST))
+      throw new BadRequestException('Invalid GST number format.');
 
     const otp = this.generateOTP();
     const expiriesIn = new Date(Date.now() + 10 * 60 * 1000);
@@ -321,7 +366,9 @@ export class AuthService {
           // Found by email
           if (!existing.waitForOtp) {
             // verified -> block signup
-            throw new ConflictException('Email already registered. Please login or recover your account.');
+            throw new ConflictException(
+              'Email already registered. Please login or recover your account.',
+            );
           }
           // pending -> update that user with incoming details
           const updated = await tx.user.update({
@@ -342,14 +389,22 @@ export class AuthService {
         }
 
         // Guards: prevent duplicate profiles for this user
-        const existingVendor = await tx.vendor.findUnique({ where: { userId } });
+        const existingVendor = await tx.vendor.findUnique({
+          where: { userId },
+        });
         if (existingVendor) {
-          throw new ConflictException('This user already has a vendor profile.');
+          throw new ConflictException(
+            'This user already has a vendor profile.',
+          );
         }
 
-        const existingCustomer = await tx.customer.findUnique({ where: { userId } });
+        const existingCustomer = await tx.customer.findUnique({
+          where: { userId },
+        });
         if (existingCustomer) {
-          throw new ConflictException('This user already has a customer profile.');
+          throw new ConflictException(
+            'This user already has a customer profile.',
+          );
         }
 
         // Create vendor record
@@ -375,12 +430,17 @@ export class AuthService {
         // Attach vendor services (dedupe)
         const uniqueServiceIds = Array.from(new Set(s.serviceIds));
         const existingVendorServices = await tx.vendorService.findMany({
-          where: { vendorId: newVendor.id, serviceId: { in: uniqueServiceIds } },
+          where: {
+            vendorId: newVendor.id,
+            serviceId: { in: uniqueServiceIds },
+          },
         });
-        const already = new Set(existingVendorServices.map(vs => vs.serviceId));
+        const already = new Set(
+          existingVendorServices.map((vs) => vs.serviceId),
+        );
         const createData = uniqueServiceIds
-          .filter(id => !already.has(id))
-          .map(serviceId => ({ vendorId: newVendor.id, serviceId }));
+          .filter((id) => !already.has(id))
+          .map((serviceId) => ({ vendorId: newVendor.id, serviceId }));
 
         if (createData.length > 0) {
           await tx.vendorService.createMany({ data: createData });
@@ -406,24 +466,24 @@ export class AuthService {
       if (error?.code === 'P2002') {
         throw new ConflictException(this.mapUniqueErrorToMessage(error));
       }
-      if (error instanceof BadRequestException || error instanceof ConflictException || error instanceof NotFoundException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
       console.error(error);
-      throw new BadRequestException(error?.message ?? 'Unable to complete signup.');
+      throw new BadRequestException(
+        error?.message ?? 'Unable to complete signup.',
+      );
     }
   }
-
-
-
 
   async signup(dto: SignUpDto): Promise<Tokens> {
     const existingUser = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          { email: dto.email },
-          { phone: dto.phone }
-        ]
+        OR: [{ email: dto.email }, { phone: dto.phone }],
       },
     });
 
@@ -433,14 +493,14 @@ export class AuthService {
 
     const otp = generateOTP();
 
-    const expiriesIn = new Date(Date.now() + 10 * 60 * 1000)
+    const expiriesIn = new Date(Date.now() + 10 * 60 * 1000);
 
     const password = await this.hashData(dto.password);
 
     let user: any;
     if (existingUser) {
       if (!existingUser.waitForOtp) {
-        throw new BadRequestException("Email or Phone no. Already Verified");
+        throw new BadRequestException('Email or Phone no. Already Verified');
       }
 
       user = await this.prisma.user.update({
@@ -450,9 +510,8 @@ export class AuthService {
           password,
           otp,
           expiriesIn,
-        }
+        },
       });
-
     } else {
       user = await this.prisma.user.create({
         data: {
@@ -470,11 +529,9 @@ export class AuthService {
       });
     }
 
-    await sendSMS(dto.phone, otp)
+    await sendSMS(dto.phone, otp);
 
-    const tokens = await this.getTokens(user.id, user.email, 
-      user.roles,
-    );
+    const tokens = await this.getTokens(user.id, user.email, user.roles);
     await this.updateRtHash(user.id, tokens.refresh_token, true);
 
     return tokens;
@@ -602,7 +659,7 @@ export class AuthService {
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        otp: "",
+        otp: '',
         expiriesIn: new Date(Date.now()),
         otpAttempts: 0,
         isActive: true,
@@ -628,7 +685,7 @@ export class AuthService {
       {
         secret: process.env.FORGOT_SECRET,
         expiresIn: '15m',
-      }
+      },
     );
 
     const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
@@ -637,29 +694,32 @@ export class AuthService {
     // await this.mailService.sendPasswordResetLink(user.email, resetLink)
     const mailPayload = {
       mail_to: user.email,
-      mail_subject: "Sending Forgot Password Link",
-      mail_body: `Hi ${user.name ?? "User"},\n\nWe received a request to reset your account password.\n\nPlease click the link below to set a new password:\n${resetLink}\n\nThis link will expire in 15 minutes for your security.\n\nIf you did not request a password reset, please ignore this email or contact our support team immediately.\n\nBest regards,\nYour Company Team`
+      mail_subject: 'Sending Forgot Password Link',
+      mail_body: `Hi ${user.name ?? 'User'},\n\nWe received a request to reset your account password.\n\nPlease click the link below to set a new password:\n${resetLink}\n\nThis link will expire in 15 minutes for your security.\n\nIf you did not request a password reset, please ignore this email or contact our support team immediately.\n\nBest regards,\nYour Company Team`,
     };
 
     // Send email
     try {
-      const response = await fetch("https://kgninfotech.orgnixo.com/api/send_email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        'https://kgninfotech.orgnixo.com/api/send_email',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(mailPayload),
         },
-        body: JSON.stringify(mailPayload),
-      });
+      );
 
       // If the mail API returns non-2xx, treat as failure
       if (!response.ok) {
         const text = await response.text().catch(() => null);
-        console.error("Mail API error:", response.status, text);
-        throw new InternalServerErrorException("Failed to send OTP email");
+        console.error('Mail API error:', response.status, text);
+        throw new InternalServerErrorException('Failed to send OTP email');
       }
     } catch (mailError) {
-      console.error("Failed to call mail API:", mailError);
-      throw new InternalServerErrorException("Failed to send OTP email");
+      console.error('Failed to call mail API:', mailError);
+      throw new InternalServerErrorException('Failed to send OTP email');
     }
 
     return { message: 'Reset link sent to email' };
@@ -674,8 +734,7 @@ export class AuthService {
       payload = this.jwtService.verify(token, {
         secret: process.env.FORGOT_SECRET, // Should be FORGOT_SECRET
       });
-
-    } catch (err) {
+    } catch {
       throw new ForbiddenException('Invalid or expired token');
     }
 
@@ -713,7 +772,6 @@ export class AuthService {
     return { message: 'Password has been reset successfully' };
   }
 
-
   async getUser(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -721,8 +779,8 @@ export class AuthService {
         name: true,
         email: true,
         phone: true,
-        profile: true
-      }
+        profile: true,
+      },
     });
 
     if (!user) {
@@ -732,12 +790,11 @@ export class AuthService {
     return user;
   }
 
-
   async updateUser(
     userId: string,
     file: Express.Multer.File,
     authUserId: string,
-    dto: UpdateUserDto
+    dto: UpdateUserDto,
   ): Promise<Tokens> {
     if (userId !== authUserId) {
       throw new ForbiddenException('You can only update your own account');
@@ -753,7 +810,7 @@ export class AuthService {
 
     // ✅ Handle profile image upload
     if (file) {
-      const imageUrl = file.filename // upload and get S3 URL
+      const imageUrl = file.filename; // upload and get S3 URL
       updateData.profile = imageUrl; // Make sure this field exists in your model
     }
 
@@ -770,13 +827,18 @@ export class AuthService {
 
     // ✅ Handle password change
     if (dto.newPassword && dto.currentPassword) {
-      const passwordMatches = await bcrypt.compare(dto.currentPassword, user.password);
+      const passwordMatches = await bcrypt.compare(
+        dto.currentPassword,
+        user.password,
+      );
       if (!passwordMatches) {
         throw new ForbiddenException('Current password is incorrect');
       }
       updateData.password = await this.hashData(dto.newPassword);
     } else if (dto.newPassword && !dto.currentPassword) {
-      throw new ForbiddenException('Current password is required to change password');
+      throw new ForbiddenException(
+        'Current password is required to change password',
+      );
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -791,27 +853,31 @@ export class AuthService {
     const tokens = await this.getTokens(
       updatedUser.id,
       updatedUser.email,
-      updatedUser.roles
+      updatedUser.roles,
     );
 
     await this.updateRtHash(
       updatedUser.id,
       tokens.refresh_token,
-      updatedUser.waitForOtp
+      updatedUser.waitForOtp,
     );
 
     return tokens;
   }
 
-
-  async updateUserByAdmin(userId: string, dto: AdminUpdateUserDto): Promise<User> {
+  async updateUserByAdmin(
+    userId: string,
+    dto: AdminUpdateUserDto,
+  ): Promise<User> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
     const updateData: any = {};
 
     if (dto.email && dto.email !== user.email) {
-      const emailExists = await this.prisma.user.findUnique({ where: { email: dto.email } });
+      const emailExists = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+      });
       if (emailExists) throw new ForbiddenException('Email already exists');
       updateData.email = dto.email;
       updateData.waitForOtp = true;
@@ -830,8 +896,6 @@ export class AuthService {
       data: updateData,
     });
   }
-
-
 
   async updateRtHash(
     userId: string,
@@ -893,10 +957,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          ...(email ? [{ email }] : []),
-          ...(phone ? [{ phone }] : []),
-        ],
+        OR: [...(email ? [{ email }] : []), ...(phone ? [{ phone }] : [])],
       },
     });
 
@@ -905,7 +966,9 @@ export class AuthService {
     }
 
     if (!user.waitForOtp) {
-      throw new BadRequestException('This account is already verified; OTP is not required.');
+      throw new BadRequestException(
+        'This account is already verified; OTP is not required.',
+      );
     }
 
     const otp = this.generateOTP();
@@ -939,7 +1002,6 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) throw new NotFoundException('User not found');
-
 
     if (user.phone === phone) {
       const otp = this.generateOTP();
@@ -978,7 +1040,7 @@ export class AuthService {
         otp,
         expiriesIn,
         waitForOtp: true,
-        // isActive: false,  
+        // isActive: false,
       },
     });
 
@@ -988,7 +1050,4 @@ export class AuthService {
       message: 'Phone updated. OTP sent to the new number.',
     };
   }
-
-
 }
-

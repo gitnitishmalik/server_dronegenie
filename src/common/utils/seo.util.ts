@@ -3,5 +3,5 @@ export function generateSeoName(name: string): string {
     .toLowerCase()
     .replace(/[^\w\s]/gi, '') // Remove special characters
     .trim()
-    .replace(/\s+/g, '-');    // Replace spaces with underscores
+    .replace(/\s+/g, '-'); // Replace spaces with underscores
 }

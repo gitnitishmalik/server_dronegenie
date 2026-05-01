@@ -33,7 +33,7 @@ import { multerConfig } from 'src/config/multer.config';
   version: '1',
 })
 export class DroneServiceController {
-  constructor(private readonly service: DroneServiceService) { }
+  constructor(private readonly service: DroneServiceService) {}
 
   @Post()
   @Roles(UserRole.ADMIN)
@@ -75,7 +75,6 @@ export class DroneServiceController {
     return this.service.getById(id);
   }
 
-
   @Public()
   @Get('seo/:seoName')
   @ApiOperation({ summary: 'Get service by category/industry seo_name' })
@@ -85,14 +84,15 @@ export class DroneServiceController {
     return await this.service.getServicesBySeoName(seoName);
   }
 
-
-
   @Public()
   @Get(':userId/:categoryId')
   @ApiOperation({ summary: 'Get Services by Category ID' })
   @ApiResponse({ status: 200, description: 'Vendor Services data retrieved' })
   @ApiResponse({ status: 404, description: ' Vendor Services not found' })
-  getServicesByCategoryId(@Param('categoryId') categoryId: string, @Param('userId') userId: string) {
+  getServicesByCategoryId(
+    @Param('categoryId') categoryId: string,
+    @Param('userId') userId: string,
+  ) {
     return this.service.getByCategoryId(categoryId, userId);
   }
 
@@ -111,7 +111,6 @@ export class DroneServiceController {
     return await this.service.update(id, dto, file);
   }
 
-
   @Delete(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete service by ID' })
@@ -121,4 +120,3 @@ export class DroneServiceController {
     return this.service.delete(id);
   }
 }
-

@@ -9,7 +9,9 @@ describe('DataProcurementController', () => {
       controllers: [DataProcurementController],
     }).compile();
 
-    controller = module.get<DataProcurementController>(DataProcurementController);
+    controller = module.get<DataProcurementController>(
+      DataProcurementController,
+    );
   });
 
   it('should be defined', () => {

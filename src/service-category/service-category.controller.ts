@@ -11,7 +11,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ServiceCategoryService } from './service-category.service';
-import { CreateServiceCategoryDto, UpdateCategoryPropertiesDto, UpdateCategoryServicesDto } from './dto/create-service-category.dto';
+import {
+  CreateServiceCategoryDto,
+  UpdateCategoryPropertiesDto,
+  UpdateCategoryServicesDto,
+} from './dto/create-service-category.dto';
 import { Public, Roles } from 'src/common/decorators';
 import { UserRole } from '@prisma/client';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
@@ -23,7 +27,6 @@ import {
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
-import * as multer from 'multer';
 import { multerConfig } from 'src/config/multer.config';
 
 @ApiTags('ServiceCategory')
@@ -35,8 +38,7 @@ import { multerConfig } from 'src/config/multer.config';
 export class ServiceCategoryController {
   constructor(
     private readonly serviceCategoryService: ServiceCategoryService,
-  ) { }
-
+  ) {}
 
   @Post('import')
   @Roles(UserRole.ADMIN)
@@ -55,29 +57,32 @@ export class ServiceCategoryController {
   @UseInterceptors(FileInterceptor('image', multerConfig))
   async create(
     @Body() createServiceCategoryDto: CreateServiceCategoryDto,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile() _file?: Express.Multer.File,
   ) {
-    return this.serviceCategoryService.create(createServiceCategoryDto, file);
+    return this.serviceCategoryService.create(createServiceCategoryDto);
   }
 
   @Get()
   @Public()
   @ApiOperation({ summary: 'Get all categories' })
-  @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Categories retrieved successfully',
+  })
   async findAll(@Query() dto: PaginationDto) {
     return this.serviceCategoryService.findAll(dto);
   }
 
-
   @Get('browse')
   @Public()
   @ApiOperation({ summary: 'Get all browse categories' })
-  @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Categories retrieved successfully',
+  })
   async getForBrowse(@Query() dto: PaginationDto) {
     return this.serviceCategoryService.getForBrowse(dto);
   }
-
-
 
   // Previously @Public() — anyone could rewrite which services belong to a
   // category, silently breaking the public taxonomy shown on the site. Gated
@@ -85,31 +90,34 @@ export class ServiceCategoryController {
   @Patch('services')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Add services in category (admin only)' })
-  @ApiResponse({ status: 200, description: 'Service added in category successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Service added in category successfully',
+  })
   async updateCategoryServices(@Body() dto: UpdateCategoryServicesDto) {
     return this.serviceCategoryService.updateCategoryServices(dto);
   }
 
-
   @Patch('properties')
   @ApiOperation({ summary: 'Add properties in category' })
-  @ApiResponse({ status: 200, description: 'Properties added in category successfully' })
-  async updateCategoryProperties(
-    @Body() dto: UpdateCategoryPropertiesDto,
-  ) {
+  @ApiResponse({
+    status: 200,
+    description: 'Properties added in category successfully',
+  })
+  async updateCategoryProperties(@Body() dto: UpdateCategoryPropertiesDto) {
     return this.serviceCategoryService.updateCategoryProperties(dto);
   }
-
-
 
   @Get('services/:categoryId')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get Category Services Updated Successfully' })
   @ApiOperation({ summary: 'Industry Services Not Found' })
-  async getCategoryServices(@Param('categoryId') categoryId: string, @Query() dto: PaginationDto) {
+  async getCategoryServices(
+    @Param('categoryId') categoryId: string,
+    @Query() dto: PaginationDto,
+  ) {
     return this.serviceCategoryService.getCategoryServices(categoryId, dto);
   }
-
 
   @Get('properties/:categoryId')
   @Roles(UserRole.ADMIN)
@@ -122,7 +130,6 @@ export class ServiceCategoryController {
     return this.serviceCategoryService.getCategoryProperties(categoryId, dto);
   }
 
-
   @Public()
   @Get('seo/:seo_name')
   @ApiOperation({ summary: 'Get category by SEO name' })
@@ -132,8 +139,6 @@ export class ServiceCategoryController {
     return this.serviceCategoryService.findBySeoName(seoName);
   }
 
-
-
   @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get category by ID' })
@@ -142,8 +147,6 @@ export class ServiceCategoryController {
   async findOne(@Param('id') id: string) {
     return this.serviceCategoryService.findOne(id);
   }
-
-
 
   @Patch(':id')
   @Roles(UserRole.ADMIN)
@@ -156,7 +159,11 @@ export class ServiceCategoryController {
     @Body() updateServiceCategoryDto: Partial<CreateServiceCategoryDto>,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.serviceCategoryService.update(id, updateServiceCategoryDto, file);
+    return this.serviceCategoryService.update(
+      id,
+      updateServiceCategoryDto,
+      file,
+    );
   }
 
   @Delete(':id')

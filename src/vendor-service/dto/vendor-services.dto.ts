@@ -1,6 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsMongoId, IsString, ArrayMinSize, IsNotEmpty } from 'class-validator';
-
+import { IsArray, IsString, ArrayMinSize, IsNotEmpty } from 'class-validator';
 
 export class AddServicesToVendorDto {
   @IsArray()

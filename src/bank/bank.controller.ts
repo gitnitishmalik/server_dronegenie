@@ -23,7 +23,10 @@ import { PrismaService } from 'src/prisma/prisma.service';
   version: '1',
 })
 export class BankController {
-  constructor(private readonly bankDetailsService: BankService, private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly bankDetailsService: BankService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   // Previously @Public() — anyone could POST bank details attached to any
   // vendorId or customerId, enabling:
@@ -35,7 +38,9 @@ export class BankController {
   // customer record being modified (or be an admin).
   @Post()
   @Roles(UserRole.ADMIN, UserRole.VENDOR, UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Add bank details for the current vendor/customer (or via admin)' })
+  @ApiOperation({
+    summary: 'Add bank details for the current vendor/customer (or via admin)',
+  })
   @ApiResponse({ status: 201, description: 'Bank details added successfully' })
   @ApiResponse({ status: 403, description: 'Not your vendor/customer record' })
   @ApiResponse({ status: 404, description: 'Vendor/Customer not found' })
@@ -54,7 +59,9 @@ export class BankController {
         });
         if (!vendor) throw new NotFoundException('Vendor not found');
         if (vendor.userId !== caller.sub) {
-          throw new ForbiddenException('You can only add bank details to your own vendor record');
+          throw new ForbiddenException(
+            'You can only add bank details to your own vendor record',
+          );
         }
       }
       if (dto.customerId) {
@@ -64,7 +71,9 @@ export class BankController {
         });
         if (!customer) throw new NotFoundException('Customer not found');
         if (customer.userId !== caller.sub) {
-          throw new ForbiddenException('You can only add bank details to your own customer record');
+          throw new ForbiddenException(
+            'You can only add bank details to your own customer record',
+          );
         }
       }
     }
@@ -88,14 +97,14 @@ export class BankController {
         id: true,
         vendor: {
           select: {
-            id: true
-          }
-        }
-      }
-    })
-    if (!user) throw new NotFoundException("User not found");
-    if (!user.vendor) throw new NotFoundException("Vendor not found");
-    const vendorId = user.vendor.id
+            id: true,
+          },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.vendor) throw new NotFoundException('Vendor not found');
+    const vendorId = user.vendor.id;
     return this.bankDetailsService.getBankDetailsByVendor(vendorId);
   }
 
@@ -113,14 +122,14 @@ export class BankController {
         id: true,
         vendor: {
           select: {
-            id: true
-          }
-        }
-      }
-    })
-    if (!user) throw new NotFoundException("User not found");
-    if (!user.vendor) throw new NotFoundException("Vendor not found");
-    const vendorId = user.vendor.id
+            id: true,
+          },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.vendor) throw new NotFoundException('Vendor not found');
+    const vendorId = user.vendor.id;
     return await this.bankDetailsService.updateBankByVendor(vendorId, dto);
   }
 
@@ -148,14 +157,14 @@ export class BankController {
         id: true,
         customer: {
           select: {
-            id: true
-          }
-        }
-      }
-    })
-    if (!user) throw new NotFoundException("User not found");
-    if (!user.customer) throw new NotFoundException("Customer not found");
-    const customerId = user.customer.id
+            id: true,
+          },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.customer) throw new NotFoundException('Customer not found');
+    const customerId = user.customer.id;
     return await this.bankDetailsService.getBankDetailsByCustomer(customerId);
   }
 
@@ -173,14 +182,14 @@ export class BankController {
         id: true,
         customer: {
           select: {
-            id: true
-          }
-        }
-      }
-    })
-    if (!user) throw new NotFoundException("User not found");
-    if (!user.customer) throw new NotFoundException("Customer not found");
-    const customerId = user.customer.id
+            id: true,
+          },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.customer) throw new NotFoundException('Customer not found');
+    const customerId = user.customer.id;
     return await this.bankDetailsService.updateBankByCustomer(customerId, dto);
   }
 

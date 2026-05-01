@@ -1,8 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { VendorPayoutStatus } from '@prisma/client';
-
 
 // Creating the Route linked account only needs a handful of fields that we
 // derive from the vendor record (legal name, business type, email, phone).
@@ -19,7 +25,6 @@ export class CreateRouteAccountDto {
   @IsString()
   profile_subcategory?: string;
 }
-
 
 // Admin-side list of all vendor payouts. Filters support operational needs:
 // "which ones failed?", "what did vendor X earn last week?", "daily reconcile".

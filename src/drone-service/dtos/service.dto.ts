@@ -13,12 +13,10 @@ import {
 import { Transform } from 'class-transformer';
 import { DgChargeType } from '@prisma/client';
 
-
 export class CreateDroneServiceDto {
   @ApiProperty()
   @IsString()
   service_name: string;
-
 
   @ApiProperty()
   @IsString()
@@ -61,7 +59,6 @@ export class CreateDroneServiceDto {
   @IsString()
   feature_needed: string;
 
-
   @ApiProperty()
   @IsNotEmpty()
   @Transform(({ value }) => parseFloat(value))
@@ -73,7 +70,8 @@ export class CreateDroneServiceDto {
   @ApiProperty({
     enum: DgChargeType,
     default: DgChargeType.PERCENT,
-    description: 'PERCENT treats dgCharges as % of vendor price; FLAT treats it as a ₹ amount.',
+    description:
+      'PERCENT treats dgCharges as % of vendor price; FLAT treats it as a ₹ amount.',
   })
   @IsOptional()
   @IsEnum(DgChargeType)
@@ -82,7 +80,10 @@ export class CreateDroneServiceDto {
   @ApiProperty()
   @IsNotEmpty()
   @Transform(({ value }) => parseFloat(value))
-  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Drone Genie Charges must be a number' })
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Drone Genie Charges must be a number' },
+  )
   @Min(0)
   // Cap at 100 only when dgChargeType is PERCENT (or omitted — backwards-compat default).
   @ValidateIf((o) => !o.dgChargeType || o.dgChargeType === DgChargeType.PERCENT)
@@ -91,13 +92,13 @@ export class CreateDroneServiceDto {
 
   @IsOptional()
   @IsString()
-  metaTitle?: string
+  metaTitle?: string;
 
   @IsOptional()
   @IsString()
-  metaDescription?: string
+  metaDescription?: string;
 
   @IsOptional()
   @IsString()
-  metaKeyword?: string
+  metaKeyword?: string;
 }

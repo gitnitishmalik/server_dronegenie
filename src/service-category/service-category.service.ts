@@ -6,9 +6,12 @@ import {
   HttpException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { CreateServiceCategoryDto, UpdateCategoryPropertiesDto, UpdateCategoryServicesDto } from './dto/create-service-category.dto';
+import {
+  CreateServiceCategoryDto,
+  UpdateCategoryPropertiesDto,
+  UpdateCategoryServicesDto,
+} from './dto/create-service-category.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { generateSeoName } from 'src/common/utils/seo.util';
 import * as XLSX from 'xlsx';
@@ -17,9 +20,7 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ServiceCategoryService {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async importFromExcel(file: Express.Multer.File) {
     if (!file) throw new ConflictException('No file provided');
@@ -37,7 +38,7 @@ export class ServiceCategoryService {
 
     // Use transaction to insert
     const result = await this.prisma.$transaction(
-      categories.map(cat =>
+      categories.map((cat) =>
         this.prisma.serviceCategory.create({
           data: cat,
         }),
@@ -47,29 +48,31 @@ export class ServiceCategoryService {
     return { message: 'Categories imported', count: result.length };
   }
 
-  async create(
-    createServiceCategoryDto: CreateServiceCategoryDto,
-    file?: Express.Multer.File,
-  ) {
+  async create(createServiceCategoryDto: CreateServiceCategoryDto) {
     try {
       // let imageUrl: string | undefined;
       // if (file) {
       //   imageUrl = file.filename
       // }
 
-      const { category_name, shortDesc, status, metaTitle, metaDescription, metaKeyword, ...rest } = createServiceCategoryDto;
+      const {
+        category_name,
+        shortDesc,
+        status,
+        metaTitle,
+        metaDescription,
+        metaKeyword,
+        ...rest
+      } = createServiceCategoryDto;
 
       const categoryName = category_name?.trim();
 
       // ✅ SEO fallback
-      const finalMetaTitle =
-        metaTitle?.trim() || categoryName;
+      const finalMetaTitle = metaTitle?.trim() || categoryName;
 
-      const finalMetaDescription =
-        metaDescription?.trim() || categoryName;
+      const finalMetaDescription = metaDescription?.trim() || categoryName;
 
-      const finalMetaKeyword =
-        metaKeyword?.trim() || categoryName;
+      const finalMetaKeyword = metaKeyword?.trim() || categoryName;
 
       return await this.prisma.serviceCategory.create({
         data: {
@@ -122,7 +125,6 @@ export class ServiceCategoryService {
   //     data: [],
   //   };
   // }
-
 
   async findAll(dto: PaginationDto) {
     try {
@@ -187,12 +189,12 @@ export class ServiceCategoryService {
                 service: {
                   select: {
                     id: true,
-                    service_name: true
-                  }
-                }
-              }
-            }
-          }
+                    service_name: true,
+                  },
+                },
+              },
+            },
+          },
         }),
         this.prisma.serviceCategory.count({ where }),
       ]);
@@ -202,13 +204,12 @@ export class ServiceCategoryService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        data
+        data,
       };
     } catch (error) {
       throw error;
     }
   }
-
 
   async getForBrowse(dto: PaginationDto) {
     try {
@@ -274,12 +275,12 @@ export class ServiceCategoryService {
                 service: {
                   select: {
                     id: true,
-                    service_name: true
-                  }
-                }
-              }
-            }
-          }
+                    service_name: true,
+                  },
+                },
+              },
+            },
+          },
         }),
         this.prisma.serviceCategory.count({ where }),
       ]);
@@ -289,13 +290,12 @@ export class ServiceCategoryService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        data
+        data,
       };
     } catch (error) {
       throw error;
     }
   }
-
 
   async findOne(id: string) {
     const obj = await this.prisma.serviceCategory.findUnique({
@@ -307,17 +307,17 @@ export class ServiceCategoryService {
             service: {
               select: {
                 id: true,
-                service_name: true
-              }
-            }
+                service_name: true,
+              },
+            },
           },
         },
         wcuProperties: {
           select: {
             id: true,
-            property: true
-          }
-        }
+            property: true,
+          },
+        },
       },
     });
     if (!obj) throw new NotFoundException('Category not found');
@@ -327,6 +327,7 @@ export class ServiceCategoryService {
   async update(
     id: string,
     updateServiceCategoryDto: Partial<CreateServiceCategoryDto>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     file?: Express.Multer.File,
   ) {
     const obj = await this.prisma.serviceCategory.findUnique({
@@ -339,23 +340,24 @@ export class ServiceCategoryService {
     //   imageUrl = file.filename
     // }
 
-    const { category_name, priorty, metaTitle, metaDescription, metaKeyword, ...rest } = updateServiceCategoryDto;
+    const {
+      category_name,
+      priorty,
+      metaTitle,
+      metaDescription,
+      metaKeyword,
+      ...rest
+    } = updateServiceCategoryDto;
 
     // ✅ final category name (new OR existing)
-    const finalCategoryName = (
-      category_name || obj.category_name
-    )?.trim();
+    const finalCategoryName = (category_name || obj.category_name)?.trim();
 
     // ✅ SEO fallback
-    const finalMetaTitle =
-      metaTitle?.trim() || finalCategoryName;
+    const finalMetaTitle = metaTitle?.trim() || finalCategoryName;
 
-    const finalMetaDescription =
-      metaDescription?.trim() || finalCategoryName;
+    const finalMetaDescription = metaDescription?.trim() || finalCategoryName;
 
-    const finalMetaKeyword =
-      metaKeyword?.trim() || finalCategoryName;
-
+    const finalMetaKeyword = metaKeyword?.trim() || finalCategoryName;
 
     return this.prisma.serviceCategory.update({
       where: { id },
@@ -390,14 +392,13 @@ export class ServiceCategoryService {
 
     if (count > 0) {
       throw new BadRequestException(
-        'Category cannot be deleted because it has associated services'
+        'Category cannot be deleted because it has associated services',
       );
     }
 
     await this.prisma.serviceCategory.delete({ where: { id } });
     return { message: 'Category deleted' };
   }
-
 
   async findBySeoName(seoName: string) {
     console.log(seoName);
@@ -411,29 +412,30 @@ export class ServiceCategoryService {
             service: {
               select: {
                 id: true,
-                service_name: true
-              }
-            }
+                service_name: true,
+              },
+            },
           },
         },
         wcuProperties: {
           select: {
             id: true,
-            property: true
-          }
-        }
+            property: true,
+          },
+        },
       },
     });
     if (!obj) throw new NotFoundException('Category not found');
     return obj;
   }
 
-
   async updateCategoryServices(dto: UpdateCategoryServicesDto) {
     const { categoryId, addServiceIds = [], removeServiceIds = [] } = dto;
 
     if (!addServiceIds.length && !removeServiceIds.length) {
-      throw new BadRequestException('Nothing to update: addServiceIds or removeServiceIds required');
+      throw new BadRequestException(
+        'Nothing to update: addServiceIds or removeServiceIds required',
+      );
     }
 
     // ensure category exists
@@ -486,7 +488,6 @@ export class ServiceCategoryService {
       },
     });
   }
-
 
   async updateCategoryProperties(dto: UpdateCategoryPropertiesDto) {
     const { categoryId, addPropertyIds = [], removePropertyIds = [] } = dto;
@@ -548,7 +549,6 @@ export class ServiceCategoryService {
     });
   }
 
-
   async getCategoryServices(categoryId: string, dto: PaginationDto) {
     try {
       // 1. Ensure category exists
@@ -562,11 +562,7 @@ export class ServiceCategoryService {
       }
 
       // 2. Pagination + search
-      const {
-        limit = '10',
-        page = '1',
-        search,
-      } = dto;
+      const { limit = '10', page = '1', search } = dto;
 
       const take = Math.max(Number(limit) || 10, 1);
       const pageNumber = Math.max(Number(page) || 1, 1);
@@ -626,7 +622,6 @@ export class ServiceCategoryService {
     }
   }
 
-
   async getCategoryProperties(categoryId: string, dto: PaginationDto) {
     try {
       // 1. Ensure category exists
@@ -640,11 +635,7 @@ export class ServiceCategoryService {
       }
 
       // 2. Pagination + search
-      const {
-        limit = '10',
-        page = '1',
-        search,
-      } = dto;
+      const { limit = '10', page = '1', search } = dto;
 
       const take = Math.max(Number(limit) || 10, 1);
       const pageNumber = Math.max(Number(page) || 1, 1);
@@ -696,7 +687,7 @@ export class ServiceCategoryService {
           page: pageNumber,
           limit: take,
           totalPages: Math.ceil(total / take),
-          properties
+          properties,
         },
       };
     } catch (error) {
@@ -704,6 +695,4 @@ export class ServiceCategoryService {
       throw new InternalServerErrorException('Internal server error');
     }
   }
-
-
 }

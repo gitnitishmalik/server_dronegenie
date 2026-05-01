@@ -5,7 +5,6 @@ import { join } from 'path';
 export async function uploadBufferFileToLocal(
   buffer: Buffer,
   fileName: string,
-  mimeType: string = 'application/octet-stream'
 ): Promise<string> {
   // Use project root so path is stable between src/ and dist/
   const uploadDir = join(process.cwd(), 'public', 'uploads');

@@ -4,6 +4,6 @@ import { DataProcurementService } from './data-procurement.service';
 
 @Module({
   controllers: [DataProcurementController],
-  providers: [DataProcurementService]
+  providers: [DataProcurementService],
 })
 export class DataProcurementModule {}

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   HttpCode,
@@ -9,8 +8,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { GetCurrentUserId, Public, Roles } from 'src/common/decorators';
-import { CreateOrderDto, VerifyPaymentDto } from './dtos/payment.dto';
+import { GetCurrentUserId, Roles } from 'src/common/decorators';
+import { VerifyPaymentDto } from './dtos/payment.dto';
 import { PaymentService } from './payment.service';
 
 @ApiTags('Payment')
@@ -25,7 +24,6 @@ export class PaymentController {
   // to customers for phishing. The real flow is the milestone-scoped pair below, which
   // requires customer auth and is gated by PAYMENTS_V2_ENABLED.
 
-
   // ---------- Payments v2 — milestone-scoped ----------
   // Both endpoints 404 when PAYMENTS_V2_ENABLED is not 'true'.
 
@@ -33,7 +31,9 @@ export class PaymentController {
   @Roles(UserRole.CUSTOMER)
   @Post('milestone/:milestoneId/create-order')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a Razorpay order for one milestone (customer-auth, gated)' })
+  @ApiOperation({
+    summary: 'Create a Razorpay order for one milestone (customer-auth, gated)',
+  })
   async createMilestoneOrder(
     @Param('milestoneId') milestoneId: string,
     @GetCurrentUserId() userId: string,
@@ -45,7 +45,9 @@ export class PaymentController {
   @Roles(UserRole.CUSTOMER)
   @Post('milestone/:milestoneId/verify')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify Razorpay payment for one milestone (customer-auth, gated)' })
+  @ApiOperation({
+    summary: 'Verify Razorpay payment for one milestone (customer-auth, gated)',
+  })
   async verifyMilestonePayment(
     @Param('milestoneId') milestoneId: string,
     @GetCurrentUserId() userId: string,

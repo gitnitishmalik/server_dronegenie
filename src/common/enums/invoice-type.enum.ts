@@ -1,4 +1,4 @@
-export enum InvoiceType{
-    VENDOR = 'VENDOR',
-    CUSTOMER = 'CUSTOMER'
+export enum InvoiceType {
+  VENDOR = 'VENDOR',
+  CUSTOMER = 'CUSTOMER',
 }

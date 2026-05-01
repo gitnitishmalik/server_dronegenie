@@ -1,10 +1,31 @@
-
-import { Body, Controller, ForbiddenException, HttpCode, HttpStatus, Post, Patch, Param, UseInterceptors, UploadedFile, Get } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Patch,
+  Param,
+  UseInterceptors,
+  UploadedFile,
+  Get,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { GetCurrentUser, GetCurrentUserId, Public, Roles } from 'src/common/decorators';
+import {
+  GetCurrentUser,
+  GetCurrentUserId,
+  Public,
+  Roles,
+} from 'src/common/decorators';
 import { JwtPayload } from './types/jwtPayload.type';
 import { Throttle } from '@nestjs/throttler';
-import { ApiBearerAuth, ApiConsumes, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   OtpVerificationDto,
   RefreshTokenDto,
@@ -18,7 +39,7 @@ import {
   CustomerSignupDto,
   VendorSignupAllDto,
   ResendOtpDto,
-  ChangePhoneDto
+  ChangePhoneDto,
 } from './dto';
 import { Tokens } from './types';
 import { User, UserRole } from '@prisma/client';
@@ -33,7 +54,7 @@ import { multerConfig } from 'src/config/multer.config';
   version: '1',
 })
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   @Public()
   @Post('signup')
@@ -53,7 +74,6 @@ export class AuthController {
     return this.authService.signupCustomer(dto);
   }
 
-
   @Public()
   @Post('signup/vendor')
   @HttpCode(HttpStatus.CREATED)
@@ -62,7 +82,6 @@ export class AuthController {
   signupVendor(@Body() dto: VendorSignupAllDto) {
     return this.authService.signupVendor(dto);
   }
-
 
   @Public()
   @Post('signin')
@@ -118,11 +137,13 @@ export class AuthController {
     return this.authService.updateUser(id, file, authUserId, dto);
   }
 
-
   @Patch('admin/update/:id')
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'User updated by admin successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'User updated by admin successfully',
+  })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   updateUserByAdmin(
     @Param('id') userId: string,
@@ -138,17 +159,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'User Retrived Successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  async getUser(
-    @Param('id') id: string,
-    @GetCurrentUser() caller: JwtPayload,
-  ) {
+  async getUser(@Param('id') id: string, @GetCurrentUser() caller: JwtPayload) {
     const isAdmin = caller.role?.includes(UserRole.ADMIN);
     if (!isAdmin && id !== caller.sub) {
       throw new ForbiddenException('You can only look up your own user record');
     }
-    return await this.authService.getUser(id)
+    return await this.authService.getUser(id);
   }
-
 
   @Public()
   @Post('forgot-password')
@@ -166,10 +183,10 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async resetForgotPassword(
     @Param('token') token: string,
-    @Body() dto: ResetForgotPasswordDto) {
+    @Body() dto: ResetForgotPasswordDto,
+  ) {
     return this.authService.resetForgotPassword(dto, token);
   }
-
 
   @Public()
   @Post('reset-password')
@@ -183,8 +200,14 @@ export class AuthController {
   @Public()
   @Post('resend-otp')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'OTP resent (or a generic message returned).' })
-  @ApiResponse({ status: 400, description: 'Invalid request (e.g., user already verified).' })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP resent (or a generic message returned).',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request (e.g., user already verified).',
+  })
   async resendOtp(@Body() dto: ResendOtpDto) {
     return this.authService.resendOtp(dto);
   }
@@ -192,13 +215,13 @@ export class AuthController {
   @Public()
   @Post('change-phone')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Phone updated; OTP sent to new number' })
+  @ApiResponse({
+    status: 200,
+    description: 'Phone updated; OTP sent to new number',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 409, description: 'Phone already in use' })
   async changePhone(@Body() dto: ChangePhoneDto) {
     return this.authService.changePhone(dto);
   }
-
-
-
 }

@@ -1,8 +1,18 @@
 // industry.service.ts
-import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateIndustryDto, UpdateIndustryDto, UpdateIndustryPropertiesDto, UpdateIndustryServicesDto } from './dtos/create-industry.dto';
-import { Pagination } from 'src/common/decorators/pagination.decorator';
+import {
+  CreateIndustryDto,
+  UpdateIndustryDto,
+  UpdateIndustryPropertiesDto,
+  UpdateIndustryServicesDto,
+} from './dtos/create-industry.dto';
 import { PaginationDto } from 'src/common/dto';
 import { generateSeoName } from 'src/common/utils/seo.util';
 import { Prisma } from '@prisma/client';
@@ -10,9 +20,7 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class IndustryService {
-  constructor(
-    private prisma: PrismaService,
-  ) { }
+  constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateIndustryDto, file: Express.Multer.File) {
     try {
@@ -20,7 +28,7 @@ export class IndustryService {
 
       // 1. Upload the image (if file is provided)
       if (file) {
-        imageUrl = file.filename
+        imageUrl = file.filename;
       } else {
         throw new Error('Image file is required');
       }
@@ -28,14 +36,11 @@ export class IndustryService {
       const industryName = dto.industry_name?.trim();
 
       // ✅ SEO fallback logic
-      const metaTitle =
-        dto.metaTitle?.trim() || industryName;
+      const metaTitle = dto.metaTitle?.trim() || industryName;
 
-      const metaDescription =
-        dto.metaDescription?.trim() || industryName;
+      const metaDescription = dto.metaDescription?.trim() || industryName;
 
-      const metaKeyword =
-        dto.metaKeyword?.trim() || industryName;
+      const metaKeyword = dto.metaKeyword?.trim() || industryName;
 
       const industry = await this.prisma.industry.create({
         data: {
@@ -134,13 +139,13 @@ export class IndustryService {
                 service: {
                   select: {
                     id: true,
-                    service_name: true
-                  }
-                }
-              }
+                    service_name: true,
+                  },
+                },
+              },
             },
-            media: true
-          }
+            media: true,
+          },
         }),
         this.prisma.industry.count({ where }),
       ]);
@@ -150,13 +155,12 @@ export class IndustryService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        data
-      }
+        data,
+      };
     } catch (error) {
       throw error;
     }
   }
-
 
   async getBrowseFor(dto: PaginationDto) {
     try {
@@ -164,7 +168,6 @@ export class IndustryService {
       const limit = dto.limit ? parseInt(dto.limit) : 10;
       const skip = (page - 1) * limit;
       console.log(dto);
-
 
       const where: Prisma.IndustryWhereInput = {
         status: 'ACTIVE',
@@ -207,13 +210,13 @@ export class IndustryService {
                 service: {
                   select: {
                     id: true,
-                    service_name: true
-                  }
-                }
-              }
+                    service_name: true,
+                  },
+                },
+              },
             },
-            media: true
-          }
+            media: true,
+          },
         }),
         this.prisma.industry.count({ where }),
       ]);
@@ -223,13 +226,12 @@ export class IndustryService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        data
-      }
+        data,
+      };
     } catch (error) {
       throw error;
     }
   }
-
 
   async findOne(id: string) {
     const industry = await this.prisma.industry.findUnique({
@@ -242,9 +244,9 @@ export class IndustryService {
             service: {
               select: {
                 id: true,
-                service_name: true
-              }
-            }
+                service_name: true,
+              },
+            },
             // properties: true,
             // category: {
             //   select:{
@@ -258,14 +260,14 @@ export class IndustryService {
             //     industry_name: true
             //   }
             // }
-          }
+          },
         },
         wcuProperties: {
           select: {
             id: true,
-            property: true
-          }
-        }
+            property: true,
+          },
+        },
       },
     });
 
@@ -286,7 +288,7 @@ export class IndustryService {
 
       let imageUrl: string | undefined;
       if (file) {
-        imageUrl = file.filename
+        imageUrl = file.filename;
       }
 
       // ✅ final name (new OR existing)
@@ -295,15 +297,11 @@ export class IndustryService {
       )?.trim();
 
       // ✅ SEO fallback
-      const metaTitle =
-        dto.metaTitle?.trim() || finalIndustryName;
+      const metaTitle = dto.metaTitle?.trim() || finalIndustryName;
 
-      const metaDescription =
-        dto.metaDescription?.trim() || finalIndustryName;
+      const metaDescription = dto.metaDescription?.trim() || finalIndustryName;
 
-      const metaKeyword =
-        dto.metaKeyword?.trim() || finalIndustryName;
-
+      const metaKeyword = dto.metaKeyword?.trim() || finalIndustryName;
 
       // Build update object
       const updateData: any = {
@@ -312,13 +310,15 @@ export class IndustryService {
         metaKeyword,
       };
 
-      if (dto.industry_name !== undefined) updateData.industry_name = dto.industry_name;
-      if (dto.industry_name !== undefined) updateData.industry_seo_name = generateSeoName(dto.industry_name);
-      if (dto.description !== undefined) updateData.description = dto.description;
+      if (dto.industry_name !== undefined)
+        updateData.industry_name = dto.industry_name;
+      if (dto.industry_name !== undefined)
+        updateData.industry_seo_name = generateSeoName(dto.industry_name);
+      if (dto.description !== undefined)
+        updateData.description = dto.description;
       if (dto.priorty !== undefined) updateData.priorty = dto.priorty;
       if (dto.status !== undefined) updateData.status = dto.status;
       if (imageUrl) updateData.image = imageUrl;
-
 
       const updatedIndustry = await this.prisma.industry.update({
         where: { id },
@@ -332,12 +332,9 @@ export class IndustryService {
     }
   }
 
-
-
   async remove(id: string) {
     return this.prisma.industry.delete({ where: { id } });
   }
-
 
   async updateIndustryServices(dto: UpdateIndustryServicesDto) {
     const { industryId, addServiceIds = [], removeServiceIds = [] } = dto;
@@ -400,7 +397,6 @@ export class IndustryService {
     });
   }
 
-
   async getServiceIndustries(industryId: string, dto: PaginationDto) {
     try {
       // 1. Make sure industry exists
@@ -414,11 +410,7 @@ export class IndustryService {
       }
 
       // 2. Pagination & search params
-      const {
-        limit = '10',
-        page = '1',
-        search,
-      } = dto;
+      const { limit = '10', page = '1', search } = dto;
 
       const take = Math.max(Number(limit) || 10, 1);
       const pageNumber = Math.max(Number(page) || 1, 1);
@@ -469,7 +461,7 @@ export class IndustryService {
           page: pageNumber,
           limit: take,
           totalPages: Math.ceil(total / take),
-          services
+          services,
         },
       };
     } catch (error) {
@@ -478,8 +470,7 @@ export class IndustryService {
     }
   }
 
-
-  async getServicesByIndustrySeoname(seo_name: string, dto: PaginationDto) {
+  async getServicesByIndustrySeoname(seo_name: string) {
     try {
       const industry = await this.prisma.industry.findFirst({
         where: { industry_seo_name: seo_name },
@@ -491,17 +482,17 @@ export class IndustryService {
               service: {
                 select: {
                   id: true,
-                  service_name: true
-                }
-              }
-            }
+                  service_name: true,
+                },
+              },
+            },
           },
           wcuProperties: {
             select: {
               id: true,
-              property: true
-            }
-          }
+              property: true,
+            },
+          },
         },
       });
 
@@ -512,7 +503,6 @@ export class IndustryService {
       throw error;
     }
   }
-
 
   async getIndustryProperties(industryId: string, dto: PaginationDto) {
     try {
@@ -527,11 +517,7 @@ export class IndustryService {
       }
 
       // 2. Pagination + search
-      const {
-        limit = '10',
-        page = '1',
-        search,
-      } = dto;
+      const { limit = '10', page = '1', search } = dto;
 
       const take = Math.max(Number(limit) || 10, 1);
       const pageNumber = Math.max(Number(page) || 1, 1);
@@ -583,7 +569,7 @@ export class IndustryService {
           page: pageNumber,
           limit: take,
           totalPages: Math.ceil(total / take),
-          properties
+          properties,
         },
       };
     } catch (error) {
@@ -591,8 +577,6 @@ export class IndustryService {
       throw new InternalServerErrorException('Internal server error');
     }
   }
-
-
 
   async updateIndustryProperties(dto: UpdateIndustryPropertiesDto) {
     const { industryId, addPropertyIds = [], removePropertyIds = [] } = dto;

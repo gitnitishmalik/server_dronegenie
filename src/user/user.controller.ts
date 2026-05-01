@@ -1,4 +1,11 @@
-import { Controller, Patch, Param, Body, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Patch,
+  Param,
+  Body,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateEmailDto } from './update-email.dto';
 
@@ -7,9 +14,15 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Patch(':id')
-  async updateEmail(@Param('id') id: string, @Body() updateEmailDto: UpdateEmailDto) {
+  async updateEmail(
+    @Param('id') id: string,
+    @Body() updateEmailDto: UpdateEmailDto,
+  ) {
     try {
-      const updatedUser = await this.userService.updateEmail(id, updateEmailDto.email);
+      const updatedUser = await this.userService.updateEmail(
+        id,
+        updateEmailDto.email,
+      );
       return {
         message: 'Email updated successfully',
         user: {

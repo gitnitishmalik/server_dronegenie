@@ -7,22 +7,18 @@ import {
   Patch,
   Post,
   Query,
-  UploadedFile,
-  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiConsumes,
 } from '@nestjs/swagger';
 import { VendorService } from './vendor.service';
 import { CreateVendorDto, QueryFilterDto, VendorProfileDto } from './dtos';
 import { GetCurrentUserId, Public, Roles } from 'src/common/decorators';
 import { UserRole } from '@prisma/client';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-
 
 @ApiTags('Vendors')
 @ApiBearerAuth()
@@ -31,16 +27,14 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
   version: '1',
 })
 export class VendorController {
-  constructor(private readonly vendorService: VendorService) { }
+  constructor(private readonly vendorService: VendorService) {}
 
   @Public()
   @Post()
   @ApiOperation({ summary: 'Create a new vendor profile' })
   @ApiResponse({ status: 201, description: 'Vendor created successfully' })
   @ApiResponse({ status: 409, description: 'Duplicate entry found' })
-  createVendor(
-    @Body() dto: CreateVendorDto,
-  ) {
+  createVendor(@Body() dto: CreateVendorDto) {
     return this.vendorService.createVendor(dto);
   }
 
@@ -52,46 +46,54 @@ export class VendorController {
     return this.vendorService.getAll(dto);
   }
 
-
-
-  @Get("monthly-order")
+  @Get('monthly-order')
   @Roles(UserRole.VENDOR)
-  @ApiOperation({ summary: "Get orders For Admin" })
-  @ApiResponse({ status: 200, description: "Admin orders Retrived Successfully" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
-  async getMonthlyOrders(@Query() dto: QueryFilterDto, @GetCurrentUserId() userId: string) {
-    return await this.vendorService.getMonthlyOrders(dto, userId)
+  @ApiOperation({ summary: 'Get orders For Admin' })
+  @ApiResponse({
+    status: 200,
+    description: 'Admin orders Retrived Successfully',
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getMonthlyOrders(
+    @Query() dto: QueryFilterDto,
+    @GetCurrentUserId() userId: string,
+  ) {
+    return await this.vendorService.getMonthlyOrders(dto, userId);
   }
 
-
-
-  @Get("monthly-revenue")
+  @Get('monthly-revenue')
   @Roles(UserRole.VENDOR)
-  @ApiOperation({ summary: "Get orders For Admin" })
-  @ApiResponse({ status: 200, description: "Admin orders Retrived Successfully" })
-  @ApiResponse({ status: 403, description: "Forbidden" })
-  async getMonthlyRevenue(@Query() dto: QueryFilterDto, @GetCurrentUserId() userId: string) {
-    return await this.vendorService.getMonthlyRevenue(dto, userId)
+  @ApiOperation({ summary: 'Get orders For Admin' })
+  @ApiResponse({
+    status: 200,
+    description: 'Admin orders Retrived Successfully',
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getMonthlyRevenue(
+    @Query() dto: QueryFilterDto,
+    @GetCurrentUserId() userId: string,
+  ) {
+    return await this.vendorService.getMonthlyRevenue(dto, userId);
   }
-
-
 
   @Get('summary/:id')
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
   @ApiOperation({ summary: 'Get Summary For Vendor Dashboard' })
-  @ApiResponse({ status: 200, description: 'Vendors Summary Retrieved Successfully' })
-  async getSummary(
-    @Param("id") id: string,
-    @Query() dto: QueryFilterDto
-  ) {
-    return await this.vendorService.summary(id, dto)
+  @ApiResponse({
+    status: 200,
+    description: 'Vendors Summary Retrieved Successfully',
+  })
+  async getSummary(@Param('id') id: string, @Query() dto: QueryFilterDto) {
+    return await this.vendorService.summary(id, dto);
   }
-
 
   @Patch('profile/:userId')
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
   @ApiOperation({ summary: 'Update vendor profile details' })
-  @ApiResponse({ status: 200, description: 'Vendor profile updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Vendor profile updated successfully',
+  })
   @ApiResponse({ status: 404, description: 'Vendor not found' })
   async updateVendorProfile(
     @Param('userId') userId: string,
@@ -100,19 +102,14 @@ export class VendorController {
     return await this.vendorService.updateVendorProfile(userId, dto);
   }
 
-
-
   @Get('profile/:userId')
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
   @ApiOperation({ summary: 'Get vendor details' })
   @ApiResponse({ status: 200, description: 'Vendor retrived successfully' })
   @ApiResponse({ status: 404, description: 'Vendor not found' })
-  async getVendorByUserId(
-    @Param('userId') userId: string
-  ) {
+  async getVendorByUserId(@Param('userId') userId: string) {
     return await this.vendorService.getVendorByUserId(userId);
   }
-
 
   @Get(':id')
   @Roles(UserRole.ADMIN)
@@ -128,10 +125,7 @@ export class VendorController {
   @ApiOperation({ summary: 'Update vendor details' })
   @ApiResponse({ status: 200, description: 'Vendor updated successfully' })
   @ApiResponse({ status: 404, description: 'Vendor not found' })
-  updateVendor(
-    @Param('id') id: string,
-    @Body() dto: Partial<CreateVendorDto>,
-  ) {
+  updateVendor(@Param('id') id: string, @Body() dto: Partial<CreateVendorDto>) {
     return this.vendorService.updateVendor(id, dto);
   }
 

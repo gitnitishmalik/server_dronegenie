@@ -1,1 +1,1 @@
-export * from './properties.dto'
+export * from './properties.dto';

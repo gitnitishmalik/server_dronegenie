@@ -51,7 +51,7 @@ export class MailService {
     <p style="margin: 0; color: #6b7280; font-size: 14px;">Best regards,<br><strong>The DriveEasy Team</strong></p>
     <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 12px;">© 2024 DriveEsy - Drive Your Way</p>
   </div>
-</div>`
+</div>`,
     };
 
     try {
@@ -68,7 +68,7 @@ export class MailService {
     const mailOptions = {
       from: process.env.GMAIL_USER,
       to,
-      subject: '🎉 Welcome to DriveEasy - Let\'s Begin A New Journey',
+      subject: "🎉 Welcome to DriveEasy - Let's Begin A New Journey",
       html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
   <!-- Header -->
   <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
@@ -113,7 +113,7 @@ export class MailService {
     <p style="margin: 0; color: #6b7280; font-size: 14px;">Happy Journey!<br><strong>The DriveEasy Team</strong></p>
     <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 12px;">© 2024 DriveEasy - Collaborative Learning Platform</p>
   </div>
-</div>`
+</div>`,
     };
 
     try {
@@ -188,18 +188,20 @@ export class MailService {
           <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 12px;">© 2025 Drone Genie. All rights reserved.</p>
         </div>
       </div>
-    `
+    `,
     };
 
     try {
       await this.transporter.sendMail(mailOptions); // ✅ Actually send the email
       console.log('Password reset email sent successfully');
-      return { success: true, message: 'Password reset email sent successfully' };
+      return {
+        success: true,
+        message: 'Password reset email sent successfully',
+      };
     } catch (error) {
       console.error('Error sending password reset email:', error);
       return { success: false, error: error.message };
     }
-
   }
 
   async sendInvoiceEmail(
@@ -257,7 +259,10 @@ export class MailService {
       console.log(`Invoice email sent: ${invoiceNumber} → ${to}`);
       return { success: true };
     } catch (error) {
-      console.error(`Error sending invoice email ${invoiceNumber} → ${to}:`, error);
+      console.error(
+        `Error sending invoice email ${invoiceNumber} → ${to}:`,
+        error,
+      );
       return { success: false, error: error.message };
     }
   }

@@ -1,6 +1,12 @@
 // create-bid-request.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsDateString, IsOptional, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsDateString,
+  IsOptional,
+  IsArray,
+} from 'class-validator';
 
 export class CreateBidRequestDto {
   @ApiProperty()
@@ -41,5 +47,5 @@ export class CreateBidRequestDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  media?: string[]
+  media?: string[];
 }

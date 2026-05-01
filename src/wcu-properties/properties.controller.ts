@@ -33,7 +33,7 @@ import { PaginationDto } from 'src/common/dto';
   version: '1',
 })
 export class PropertiesController {
-  constructor(private readonly service: PropertiesService) { }
+  constructor(private readonly service: PropertiesService) {}
 
   @Post()
   @Roles(UserRole.ADMIN)
@@ -52,9 +52,7 @@ export class PropertiesController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get Property' })
   @ApiResponse({ status: 200, description: 'Property Retrived successfully' })
-  get(
-    @Param('id') id: string,
-  ) {
+  get(@Param('id') id: string) {
     return this.service.get(id);
   }
 
@@ -62,9 +60,7 @@ export class PropertiesController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get All Service Properties' })
   @ApiResponse({ status: 200, description: 'Properties Retrived successfully' })
-  getAll(
-    @Query() dto: PaginationDto,
-  ) {
+  getAll(@Query() dto: PaginationDto) {
     return this.service.getAll(dto);
   }
 

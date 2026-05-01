@@ -10,7 +10,13 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { BidReplyService } from './bid-reply.service';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { GetCurrentUser, GetCurrentUserId, Roles } from 'src/common/decorators';
 import { JwtPayload } from 'src/auth/types';
 import { CreateBidReplyDto, UpdateBidReplyDto } from './dtos/bid-reply.dto';
@@ -48,12 +54,13 @@ export class BidReplyController {
   @ApiResponse({ status: 404, description: 'Bid Reply Not Found' })
   getByBidRequestIdForVendor(
     @GetCurrentUserId('userId') userId: string,
-    @Param('bidRequestId') bidRequestId: string
+    @Param('bidRequestId') bidRequestId: string,
   ) {
-    return this.bidReplyService.getByBidRequestIdForVendor(userId, bidRequestId);
-
+    return this.bidReplyService.getByBidRequestIdForVendor(
+      userId,
+      bidRequestId,
+    );
   }
-
 
   @Get('bid-req/:bidRequestId')
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
@@ -64,9 +71,11 @@ export class BidReplyController {
     @Param('bidRequestId') bidRequestId: string,
     @GetCurrentUser() caller: JwtPayload,
   ) {
-    return this.bidReplyService.getReplyByBidRequestIdForCustomer(bidRequestId, caller);
+    return this.bidReplyService.getReplyByBidRequestIdForCustomer(
+      bidRequestId,
+      caller,
+    );
   }
-
 
   @Patch(':id')
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
@@ -84,5 +93,4 @@ export class BidReplyController {
   ) {
     return this.bidReplyService.update(id, dto, caller, files);
   }
-
 }

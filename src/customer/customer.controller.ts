@@ -15,7 +15,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CustomerService } from './customer.service';
-import { CreateCustomerDto, GetCustomerDto, UpdateCustomerProfileDto } from './dtos';
+import { CreateCustomerDto, UpdateCustomerProfileDto } from './dtos';
 import { Public, Roles } from 'src/common/decorators';
 import { UserRole } from '@prisma/client';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
@@ -47,28 +47,31 @@ export class CustomerController {
     return this.customerService.getAll(dto);
   }
 
-
   @Get('summary/:id')
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Get Summary For Customer Dashboard' })
-  @ApiResponse({ status: 200, description: 'Customers Summary Retrieved Successfully' })
-  async getSummary(
-    @Param('id') id: string,
-    @Query() dto: QueryFilterDto) {
-    return await this.customerService.summary(id, dto)
+  @ApiResponse({
+    status: 200,
+    description: 'Customers Summary Retrieved Successfully',
+  })
+  async getSummary(@Param('id') id: string, @Query() dto: QueryFilterDto) {
+    return await this.customerService.summary(id, dto);
   }
-
 
   @Patch('profile/:userId')
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Update customer profile details' })
-  @ApiResponse({ status: 200, description: 'Customer profile updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Customer profile updated successfully',
+  })
   @ApiResponse({ status: 404, description: 'Customer not found' })
-  profileUpdateCustomer(@Param('userId') userId: string, @Body() dto: UpdateCustomerProfileDto) {
+  profileUpdateCustomer(
+    @Param('userId') userId: string,
+    @Body() dto: UpdateCustomerProfileDto,
+  ) {
     return this.customerService.profileUpdateCustomer(userId, dto);
   }
-
-
 
   @Get('profile/:userId')
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
@@ -79,7 +82,6 @@ export class CustomerController {
     return this.customerService.getCustomerByUserId(userId);
   }
 
-  
   @Get(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get customer by ID' })
@@ -89,13 +91,15 @@ export class CustomerController {
     return this.customerService.getCustomerById(id);
   }
 
-
   @Patch(':id')
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Update customer details' })
   @ApiResponse({ status: 200, description: 'Customer updated successfully' })
   @ApiResponse({ status: 404, description: 'Customer not found' })
-  updateCustomer(@Param('id') id: string, @Body() dto: Partial<CreateCustomerDto>) {
+  updateCustomer(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateCustomerDto>,
+  ) {
     return this.customerService.updateCustomer(id, dto);
   }
 
@@ -107,7 +111,4 @@ export class CustomerController {
   deleteCustomer(@Param('id') id: string) {
     return this.customerService.deleteCustomer(id);
   }
-
-
-  
 }
