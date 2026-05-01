@@ -261,8 +261,6 @@ export class MailService {
       return { success: false, error: error.message };
     }
   }
-<<<<<<< Updated upstream
-
   async sendChatInquiry(args: {
     fromName: string;
     fromEmail: string;
@@ -312,6 +310,4 @@ export class MailService {
       return { success: false, error: error?.message || 'send failed' };
     }
   }
-=======
->>>>>>> Stashed changes
 }

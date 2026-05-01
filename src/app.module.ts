@@ -39,6 +39,7 @@ import { PublicConfigModule } from './public-config/public-config.module';
 import { VendorPayoutModule } from './vendor-payout/vendor-payout.module';
 import { RazorpayWebhookModule } from './razorpay-webhook/razorpay-webhook.module';
 import { SeoMetaModule } from './seo-meta/seo-meta.module';
+import { DataProcurementModule } from './data-procurement/data-procurement.module';
 
 @Module({
   imports: [
@@ -110,6 +111,7 @@ import { SeoMetaModule } from './seo-meta/seo-meta.module';
     VendorPayoutModule,
     RazorpayWebhookModule,
     SeoMetaModule,
+    DataProcurementModule,
   ],
   controllers: [],
   providers: [

@@ -506,11 +506,7 @@ export class AuthService {
       throw new UnauthorizedException(INVALID);
     }
 
-<<<<<<< Updated upstream
-    if (dto.role && dto.role !== user.roles) {
-=======
     if (dto.role && !user.roles.includes(dto.role)) {
->>>>>>> Stashed changes
       throw new UnauthorizedException(INVALID);
     }
 

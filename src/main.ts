@@ -15,12 +15,8 @@ const allowedOrigins = [
   'http://143.244.141.92',
   'https://dronegenie.in',
   'https://www.dronegenie.in',
-<<<<<<< Updated upstream
-  'https://dronegenie.aipower.guru'
-=======
   'https://dronegenie.aipower.guru',
   'https://drone-genie-phi.vercel.app',
->>>>>>> Stashed changes
 ];
 
 async function bootstrap() {
@@ -29,25 +25,19 @@ async function bootstrap() {
   const port = process.env.PORT || (isProd ? process.env.PROD_PORT : process.env.DEV_PORT) || 4000;
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-<<<<<<< Updated upstream
     // Needed for Razorpay webhook HMAC verification — we must hash the exact
     // raw bytes Razorpay sent, not the parsed-then-reserialised JSON.
-=======
->>>>>>> Stashed changes
     rawBody: true,
     cors: {
       origin: (origin, callback) => {
         if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
-<<<<<<< Updated upstream
           // Don't throw — that surfaces as a 500 on every cross-origin OPTIONS
           // preflight from a disallowed origin. Returning `false` makes the
           // `cors` middleware reply without `Access-Control-Allow-Origin`,
           // which is the correct behavior: the browser sees no allow header
           // and blocks the request.
-=======
->>>>>>> Stashed changes
           callback(null, false);
         }
       },
@@ -55,18 +45,12 @@ async function bootstrap() {
     },
   });
 
-<<<<<<< Updated upstream
   // Remove the Express fingerprint (x-powered-by: Express). Harmless on its
   // own but a free signal for scanners — no reason to broadcast the stack.
   app.disable('x-powered-by');
 
   // Trust loopback so req.ip / throttler bucket per real client (Caddy is on the same host).
   app.set('trust proxy', 'loopback');
-
-=======
-  app.disable('x-powered-by');
-  app.set('trust proxy', 'loopback');
->>>>>>> Stashed changes
 
   app.useStaticAssets(join(__dirname, '..', 'public'), {
     prefix: '/uploads/',

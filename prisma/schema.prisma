@@ -12,7 +12,7 @@ model User {
   name              String
   email             String              @unique
   phone             String              @unique
-  roles             UserRole
+  roles             UserRole[]
   profile           String?
   password          String
   isActive          Boolean             @default(true)
@@ -582,7 +582,6 @@ model Seo_Meta{
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
-<<<<<<< Updated upstream
 }
 
 
@@ -840,433 +839,427 @@ enum ZoneReviewStatus {
   REJECTED
   AUTO_PUBLISHED
 }
-=======
+
+// ---------------------------------------------------------------------
+// 1. ImageryCeilingRate — admin-managed pricing table (FRD §9.3)
+// ---------------------------------------------------------------------
+// Governs the ceiling INR rate per km² for every (sensor_class,
+// resolution_tier, gsd_tier, season) combination. Soft-deleted via
+// `active` flag so historical quotes remain auditable.
+//
+// Uniqueness: only ONE active row per combination at a time. We
+// enforce this in the service layer because MongoDB partial unique
+// indexes via Prisma require a `db push` workaround — see
+// `mongo-indexes.md` for the exact partial-index command.
+
+model ImageryCeilingRate {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+
+  sensorClass     SensorClass
+  resolutionTier  ResolutionTier
+  gsdTier         GsdTier
+  season          Season
+
+  // Rate stored in PAISE per km² (1 INR = 100 paise) — FRD §9.1
+  rateInrPerKm2   Int
+
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?      // null = indefinite
+  active          Boolean        @default(true)
+
+  createdAt       DateTime       @default(now())
+  createdById     String         @db.ObjectId    // FK to User.id (admin)
+  updatedAt       DateTime       @updatedAt
+  updatedById     String?        @db.ObjectId
+
+  @@index([sensorClass, resolutionTier, gsdTier, season, active])
+  @@map("imagery_ceiling_rates")
 }
->>>>>>> Stashed changes
- 
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   1 .   I m a g e r y C e i l i n g R a t e   � �    a d m i n - m a n a g e d   p r i c i n g   t a b l e   ( F R D   � � 9 . 3 )  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   G o v e r n s   t h e   c e i l i n g   I N R   r a t e   p e r   k m � �   f o r   e v e r y   ( s e n s o r _ c l a s s ,  
- / /   r e s o l u t i o n _ t i e r ,   g s d _ t i e r ,   s e a s o n )   c o m b i n a t i o n .   S o f t - d e l e t e d   v i a  
- / /   ` a c t i v e `   f l a g   s o   h i s t o r i c a l   q u o t e s   r e m a i n   a u d i t a b l e .  
- / /  
- / /   U n i q u e n e s s :   o n l y   O N E   a c t i v e   r o w   p e r   c o m b i n a t i o n   a t   a   t i m e .   W e  
- / /   e n f o r c e   t h i s   i n   t h e   s e r v i c e   l a y e r   b e c a u s e   M o n g o D B   p a r t i a l   u n i q u e  
- / /   i n d e x e s   v i a   P r i s m a   r e q u i r e   a   ` d b   p u s h `   w o r k a r o u n d   � �    s e e  
- / /   ` m o n g o - i n d e x e s . m d `   f o r   t h e   e x a c t   p a r t i a l - i n d e x   c o m m a n d .  
-  
- m o d e l   I m a g e r y C e i l i n g R a t e   {  
-     i d                             S t r i n g                   @ i d   @ d e f a u l t ( a u t o ( ) )   @ m a p ( " _ i d " )   @ d b . O b j e c t I d  
-  
-     s e n s o r C l a s s           S e n s o r C l a s s  
-     r e s o l u t i o n T i e r     R e s o l u t i o n T i e r  
-     g s d T i e r                   G s d T i e r  
-     s e a s o n                     S e a s o n  
-  
-     / /   R a t e   s t o r e d   i n   P A I S E   p e r   k m � �   ( 1   I N R   =   1 0 0   p a i s e )   � �    F R D   � � 9 . 1  
-     r a t e I n r P e r K m 2       I n t  
-  
-     e f f e c t i v e F r o m       D a t e T i m e  
-     e f f e c t i v e T o           D a t e T i m e ?             / /   n u l l   =   i n d e f i n i t e  
-     a c t i v e                     B o o l e a n                 @ d e f a u l t ( t r u e )  
-  
-     c r e a t e d A t               D a t e T i m e               @ d e f a u l t ( n o w ( ) )  
-     c r e a t e d B y I d           S t r i n g                   @ d b . O b j e c t I d         / /   F K   t o   U s e r . i d   ( a d m i n )  
-     u p d a t e d A t               D a t e T i m e               @ u p d a t e d A t  
-     u p d a t e d B y I d           S t r i n g ?                 @ d b . O b j e c t I d  
-  
-     @ @ i n d e x ( [ s e n s o r C l a s s ,   r e s o l u t i o n T i e r ,   g s d T i e r ,   s e a s o n ,   a c t i v e ] )  
-     @ @ m a p ( " i m a g e r y _ c e i l i n g _ r a t e s " )  
- }  
-  
-  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   2 .   D a t a P r o c u r e m e n t R e q u e s t   � �    t h e   p a r e n t   r e c o r d   ( F R D   � � 9 . 4 )  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   O n e   r e q u e s t   p e r   v e n d o r ' s   " i n t e n t   t o   s e l l " .   A   r e q u e s t   m a y   y i e l d   z e r o   o r  
- / /   o n e   q u o t e ,   a n d   z e r o - t o - t h r e e   s u b m i s s i o n   a t t e m p t s .   T h e   ` s t a t e `   f i e l d   i s  
- / /   t h e   c a n o n i c a l   s t a t e   m a c h i n e   � �    s e e   � � 9 . 1 0   o f   t h e   F R D .  
- / /  
- / /   ` b o u n d a r y G e o m `   i s   a   G e o J S O N   P o l y g o n :   {   t y p e :   " P o l y g o n " ,  
- / /   c o o r d i n a t e s :   [   [   [ l n g , l a t ] ,   . . .   ]   ]   } .   M o n g o D B   w i l l   i n d e x   t h i s   w i t h   a  
- / /   2 d s p h e r e   i n d e x   ( a d d e d   v i a   r u n C o m m a n d R a w   m i g r a t i o n ) .  
-  
- m o d e l   D a t a P r o c u r e m e n t R e q u e s t   {  
-     i d                                         S t r i n g                             @ i d   @ d e f a u l t ( a u t o ( ) )   @ m a p ( " _ i d " )   @ d b . O b j e c t I d  
-     r e q u e s t U i d                         S t r i n g                             @ u n i q u e   @ d e f a u l t ( u u i d ( ) )       / /   v e n d o r - f a c i n g   o p a q u e   I D  
-  
-     v e n d o r I d                             S t r i n g                             @ d b . O b j e c t I d  
-     v e n d o r                                 V e n d o r                             @ r e l a t i o n ( f i e l d s :   [ v e n d o r I d ] ,   r e f e r e n c e s :   [ i d ] )  
-  
-     / /   G e o J S O N   P o l y g o n .   I n d e x e d   v i a   2 d s p h e r e   m i g r a t i o n   s c r i p t .  
-     b o u n d a r y G e o m                     J s o n  
-     a r e a K m 2                               D e c i m a l                           @ d b . D e c i m a l ( 1 0 ,   4 )  
-  
-     s e n s o r C l a s s                       S e n s o r C l a s s  
-     s e n s o r M o d e l                       S t r i n g ?                           / /   " D J I   M a v i c   3 M "  
-     c a p t u r e D a t e                       D a t e T i m e  
-     c l a i m e d G s d C m                     D e c i m a l                           @ d b . D e c i m a l ( 8 ,   3 )  
-     p o s i t i o n a l A c c u r a c y M       D e c i m a l                           @ d b . D e c i m a l ( 8 ,   3 )  
-     c r s C o d e                               S t r i n g                             / /   " E P S G : 3 2 6 4 3 " ,   " E P S G : 4 3 2 6 " ,   e t c .  
-     s e a s o n T a g                           S e a s o n                             / /   c o m p u t e d   f r o m   c a p t u r e D a t e  
-     p r o c e s s i n g L e v e l               P r o c e s s i n g L e v e l  
-     w e a t h e r N o t e s                     S t r i n g ?  
-  
-     s t a t e                                   R e q u e s t S t a t e                 @ d e f a u l t ( D R A F T )  
-  
-     / /   C o v e r a g e   c h e c k   o u t c o m e   � �    f u l l   a u d i t   p a y l o a d   ( F R D   A C - F 0 3 - 0 3 )  
-     c o v e r a g e C h e c k R e s u l t       J s o n ?  
-  
-     / /   Q u o t e   f i e l d s   ( p o p u l a t e d   w h e n   s t a t e   > =   Q U O T E D )  
-     q u o t e A m o u n t I n r                 I n t ?                                 / /   g r o s s ,   i n   p a i s e  
-     c e i l i n g R a t e I d                   S t r i n g ?                           @ d b . O b j e c t I d               / /   w h i c h   r a t e   r o w   w a s   u s e d  
-     q u a l i t y E s t i m a t e               D e c i m a l ?                         @ d b . D e c i m a l ( 4 ,   3 )     / /   0 . 0 0 0 � �  1 . 0 0 0  
-     q u a l i t y T i e r E s t i m a t e       Q u a l i t y T i e r ?                 / /   S / A / B / C   e s t i m a t e   a t   q u o t e  
-     d i s c o u n t P c t E s t i m a t e       D e c i m a l ?                         @ d b . D e c i m a l ( 5 ,   2 )     / /   0 . 0 0 � �  4 0 . 0 0  
-     q u o t e I s s u e d A t                   D a t e T i m e ?  
-     q u o t e E x p i r e s A t                 D a t e T i m e ?                       / /   7 2 h   a f t e r   i s s u a n c e   ( F R D   A C - F 0 4 - 0 4 )  
-     q u o t e A c c e p t e d A t               D a t e T i m e ?  
-     q u o t e D e c l i n e R e a s o n         S t r i n g ?  
-  
-     / /   R e t r y   t r a c k i n g   � �    m a x   3   a t t e m p t s   ( F R D   � � 8 . 1 2 )  
-     a t t e m p t s C o u n t                   I n t                                   @ d e f a u l t ( 0 )  
-  
-     c r e a t e d A t                           D a t e T i m e                         @ d e f a u l t ( n o w ( ) )  
-     u p d a t e d A t                           D a t e T i m e                         @ u p d a t e d A t  
-  
-     / /   R e l a t i o n s  
-     s u b m i s s i o n s                       D a t a S u b m i s s i o n [ ]  
-     p a y o u t s                               P a y o u t [ ]  
-  
-     @ @ i n d e x ( [ v e n d o r I d ,   s t a t e ] )  
-     @ @ i n d e x ( [ s t a t e ] )  
-     @ @ i n d e x ( [ c r e a t e d A t ] )  
-     @ @ m a p ( " d a t a _ p r o c u r e m e n t _ r e q u e s t s " )  
- }  
-  
-  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   3 .   D a t a S u b m i s s i o n   � �    o n e   r e c o r d   p e r   u p l o a d   a t t e m p t   ( F R D   � � 9 . 5 )  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   A   s i n g l e   r e q u e s t   c a n   h a v e   u p   t o   3   s u b m i s s i o n s   ( i n i t i a l   +   2   r e t r i e s ) .  
- / /   E a c h   s u b m i s s i o n   h a s   e x a c t l y   o n e   q u a l i t y _ i n s p e c t i o n   r e c o r d   o n c e  
- / /   i n s p e c t i o n   c o m p l e t e s .  
-  
- m o d e l   D a t a S u b m i s s i o n   {  
-     i d                                         S t r i n g                                     @ i d   @ d e f a u l t ( a u t o ( ) )   @ m a p ( " _ i d " )   @ d b . O b j e c t I d  
-  
-     r e q u e s t I d                           S t r i n g                                     @ d b . O b j e c t I d  
-     r e q u e s t                               D a t a P r o c u r e m e n t R e q u e s t     @ r e l a t i o n ( f i e l d s :   [ r e q u e s t I d ] ,   r e f e r e n c e s :   [ i d ] )  
-  
-     a t t e m p t N u m b e r                   I n t                                           / /   1 ,   2 ,   o r   3  
-  
-     u p l o a d M o d e                         U p l o a d M o d e                             / /   B R O W S E R   |   S E R V E R _ F E T C H  
-     s o u r c e U r l s                         S t r i n g [ ]                                 / /   p o p u l a t e d   f o r   S E R V E R _ F E T C H   o n l y  
-     s t o r a g e P a t h                       S t r i n g                                     / /   O C I   p r e f i x   f o r   t h i s   a t t e m p t ' s   b y t e s  
-  
-     t o t a l B y t e s                         B i g I n t ?                                   / /   B i g I n t   b e c a u s e   > 2 G B   i s   c o m m o n  
-     f i l e C o u n t                           I n t ?  
-     s h a 2 5 6 M a n i f e s t                 S t r i n g ?                                   / /   S H A - 2 5 6   o f   c o n c a t e n a t e d   p e r - f i l e   c h e c k s u m s  
-  
-     u p l o a d S t a r t e d A t               D a t e T i m e                                 @ d e f a u l t ( n o w ( ) )  
-     u p l o a d C o m p l e t e d A t           D a t e T i m e ?  
-  
-     i n s p e c t i o n S t a t e               I n s p e c t i o n S t a t e                   @ d e f a u l t ( P E N D I N G )  
-     r e j e c t i o n R e a s o n s             R e j e c t i o n R e a s o n [ ]               / /   e m p t y   u n l e s s   R E J E C T E D  
-  
-     c r e a t e d A t                           D a t e T i m e                                 @ d e f a u l t ( n o w ( ) )  
-     u p d a t e d A t                           D a t e T i m e                                 @ u p d a t e d A t  
-  
-     i n s p e c t i o n                         Q u a l i t y I n s p e c t i o n ?  
-  
-     @ @ u n i q u e ( [ r e q u e s t I d ,   a t t e m p t N u m b e r ] )  
-     @ @ i n d e x ( [ r e q u e s t I d ] )  
-     @ @ i n d e x ( [ i n s p e c t i o n S t a t e ] )  
-     @ @ m a p ( " d a t a _ s u b m i s s i o n s " )  
- }  
-  
-  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   4 .   Q u a l i t y I n s p e c t i o n   � �    S t a g e   1   +   S t a g e   2   r e s u l t s   ( F R D   � � 9 . 6 )  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   K e p t   a s   a   s e p a r a t e   m o d e l   r a t h e r   t h a n   c o l u m n s   o n   D a t a S u b m i s s i o n   s o   w e  
- / /   c a n   r e - i n s p e c t   ( e . g .   a f t e r   a   m o d e l   u p g r a d e )   w i t h o u t   o v e r w r i t i n g   t h e  
- / /   o r i g i n a l   v e r d i c t .   ` s t a g e 1 M e t r i c s `   i s   a   J S O N   o b j e c t   c o n t a i n i n g   e v e r y  
- / /   i n d i v i d u a l   C V   c h e c k   r e s u l t ;   ` s t a g e 2 R a t i o n a l e `   i s   t h e   v e r b a t i m   V L M  
- / /   r e s p o n s e   ( F R D   A C - F 0 9 - 0 3   � �    n o   s i l e n t   s u m m a r i s a t i o n ) .  
-  
- m o d e l   Q u a l i t y I n s p e c t i o n   {  
-     i d                                     S t r i n g                     @ i d   @ d e f a u l t ( a u t o ( ) )   @ m a p ( " _ i d " )   @ d b . O b j e c t I d  
-  
-     s u b m i s s i o n I d                 S t r i n g                     @ u n i q u e   @ d b . O b j e c t I d  
-     s u b m i s s i o n                     D a t a S u b m i s s i o n     @ r e l a t i o n ( f i e l d s :   [ s u b m i s s i o n I d ] ,   r e f e r e n c e s :   [ i d ] )  
-  
-     / /   S t a g e   1 :   c l a s s i c a l   C V  
-     s t a g e 1 S c o r e                   D e c i m a l ?                 @ d b . D e c i m a l ( 4 ,   3 )       / /   0 . 0 0 0 � �  1 . 0 0 0  
-     s t a g e 1 M e t r i c s               J s o n ?                       / /   {   n o D a t a P c t ,   g s d D e l t a ,   b l u r V a r ,   . . .   p e r   c h e c k   }  
-     s t a g e 1 C o m p l e t e d A t       D a t e T i m e ?  
-  
-     / /   S t a g e   2 :   V L M  
-     s t a g e 2 S c o r e                   D e c i m a l ?                 @ d b . D e c i m a l ( 4 ,   3 )  
-     s t a g e 2 R a t i o n a l e           S t r i n g ?                   / /   v e r b a t i m   C l a u d e   r e s p o n s e  
-     s t a g e 2 R a w R e s p o n s e       J s o n ?                       / /   f u l l   s t r u c t u r e d   r u b r i c   o u t p u t  
-     s t a g e 2 C o m p l e t e d A t       D a t e T i m e ?  
-  
-     / /   C o m p o s i t e   +   d e c i s i o n  
-     c o m p o s i t e S c o r e             D e c i m a l ?                 @ d b . D e c i m a l ( 4 ,   3 )       / /   0 . 6 5 * S 1   +   0 . 3 5 * S 2  
-     t i e r                                 Q u a l i t y T i e r ?         / /   S   |   A   |   B   |   C   |   F A I L  
-     f i n a l D i s c o u n t P c t         D e c i m a l ?                 @ d b . D e c i m a l ( 5 ,   2 )       / /   0 . 0 0 � �  4 0 . 0 0  
-  
-     / /   R e p r o d u c i b i l i t y  
-     i n s p e c t o r V e r s i o n         S t r i n g                     / /   e . g .   " s t a g e 1 - v 1 . 2   |   s t a g e 2 - c l a u d e - 3 - 7 - s o n n e t "  
-     p r e v i e w T i l e P a t h s         S t r i n g [ ]                 / /   O C I   p a t h s   o f   t h e   t i l e s   s e n t   t o   V L M  
-  
-     c r e a t e d A t                       D a t e T i m e                 @ d e f a u l t ( n o w ( ) )  
-     c o m p l e t e d A t                   D a t e T i m e ?  
-  
-     @ @ m a p ( " q u a l i t y _ i n s p e c t i o n s " )  
- }  
-  
-  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   5 .   I m a g e r y I n v e n t o r y   � �    a c c e p t e d   i m a g e r y   c a t a l o g   ( F R D   � � 9 . 7 )  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   S o u r c e - o f - t r u t h   f o r   t h e   c o v e r a g e   c h e c k   o n   s u b s e q u e n t   s u b m i s s i o n s .  
- / /   ` e x t e n t G e o m `   c a r r i e s   a   G e o J S O N   P o l y g o n   a n d   i s   i n d e x e d   v i a   2 d s p h e r e .  
-  
- m o d e l   I m a g e r y I n v e n t o r y   {  
-     i d                                     S t r i n g                     @ i d   @ d e f a u l t ( a u t o ( ) )   @ m a p ( " _ i d " )   @ d b . O b j e c t I d  
-  
-     s u b m i s s i o n I d                 S t r i n g                     @ d b . O b j e c t I d               / /   p r o v e n a n c e  
-     v e n d o r I d                         S t r i n g                     @ d b . O b j e c t I d               / /   o r i g i n a l   v e n d o r  
-  
-     e x t e n t G e o m                     J s o n                         / /   G e o J S O N   P o l y g o n  
-     s e n s o r C l a s s                   S e n s o r C l a s s  
-     g s d C m                               D e c i m a l                   @ d b . D e c i m a l ( 8 ,   3 )     / /   A C T U A L   ( m e a s u r e d )   G S D ,   n o t   c l a i m e d  
-     s e a s o n T a g                       S e a s o n  
-     c a p t u r e D a t e                   D a t e T i m e  
-  
-     s t o r a g e U r i                     S t r i n g                     / /   c a n o n i c a l   i n v e n t o r y   b u c k e t   U R I  
-     t i l e I n d e x U r i                 S t r i n g ?                   / /   p r e - g e n e r a t e d   t i l e   i n d e x ,   i f   a n y  
-  
-     r i g h t s                             I n v e n t o r y R i g h t s  
-     l i c e n c e E x p i r y               D a t e T i m e ?               / /   f o r   T E R M _ L I C E N C E   o n l y  
-  
-     a c q u i s i t i o n C o s t I n r     I n t                           / /   g r o s s   p a i s e   � �    f o r   a c c o u n t i n g  
-  
-     c r e a t e d A t                       D a t e T i m e                 @ d e f a u l t ( n o w ( ) )  
-  
-     @ @ i n d e x ( [ s e n s o r C l a s s ,   s e a s o n T a g ] )  
-     @ @ i n d e x ( [ c a p t u r e D a t e ] )  
-     @ @ m a p ( " i m a g e r y _ i n v e n t o r y " )  
- }  
-  
-  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   6 .   P a y o u t   � �    o u t b o u n d   p a y m e n t   l e d g e r   ( F R D   � � 9 . 8 )  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   R e c o n c i l e d   a g a i n s t   R a z o r p a y X .   I d e m p o t e n c y   k e y   i s   r e q u e s t U i d   +   " - "   +  
- / /   a t t e m p t N u m b e r ,   e n f o r c e d   i n   t h e   s e r v i c e   l a y e r .  
-  
- m o d e l   P a y o u t   {  
-     i d                                     S t r i n g                                     @ i d   @ d e f a u l t ( a u t o ( ) )   @ m a p ( " _ i d " )   @ d b . O b j e c t I d  
-  
-     r e q u e s t I d                       S t r i n g                                     @ d b . O b j e c t I d  
-     r e q u e s t                           D a t a P r o c u r e m e n t R e q u e s t     @ r e l a t i o n ( f i e l d s :   [ r e q u e s t I d ] ,   r e f e r e n c e s :   [ i d ] )  
-  
-     v e n d o r I d                         S t r i n g                                     @ d b . O b j e c t I d  
-  
-     g r o s s A m o u n t I n r             I n t                                           / /   p a i s e  
-     t d s R a t e B p s                     I n t                                           / /   b a s i s   p o i n t s :   2 0 0   =   2 % ,   2 0 0 0   =   2 0 %  
-     t d s A m o u n t I n r                 I n t                                           / /   p a i s e   w i t h h e l d  
-     n e t A m o u n t I n r                 I n t                                           / /   p a i s e   p a i d  
-  
-     r a i l                                 P a y o u t R a i l                             / /   U P I   |   I M P S   |   N E F T  
-     d e s t i n a t i o n                   S t r i n g                                     / /   V P A   o r   m a s k e d   a c c o u n t   n u m b e r  
-  
-     r a z o r p a y x P a y o u t I d       S t r i n g ?                                   @ u n i q u e  
-     u t r                                   S t r i n g ?                                   / /   b a n k   U T R   a f t e r   s e t t l e m e n t  
-  
-     s t a t e                               P a y o u t S t a t e                           @ d e f a u l t ( Q U E U E D )  
-     f a i l u r e R e a s o n               S t r i n g ?                                   / /   p o p u l a t e d   o n l y   o n   F A I L E D  
-  
-     i n i t i a t e d A t                   D a t e T i m e                                 @ d e f a u l t ( n o w ( ) )  
-     s e t t l e d A t                       D a t e T i m e ?  
-  
-     @ @ i n d e x ( [ r e q u e s t I d ] )  
-     @ @ i n d e x ( [ v e n d o r I d ] )  
-     @ @ i n d e x ( [ s t a t e ] )  
-     @ @ m a p ( " p a y o u t s " )  
- }  
-  
-  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   7 .   A u d i t L o g   � �    a p p e n d - o n l y   i m m u t a b l e   a u d i t   t r a i l   ( F R D   � � 9 . 9 )  
- / /   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
- / /   M o n g o D B   h a s   n o   t r i g g e r s ,   s o   i m m u t a b i l i t y   i s   e n f o r c e d   i n   t h e   s e r v i c e  
- / /   l a y e r :   o n l y   a n   ` a u d i t L o g . c r e a t e `   i s   e x p o s e d ;   u p d a t e / d e l e t e   a r e  
- / /   d i s a l l o w e d   b y   r e p o s i t o r y   d e s i g n .   W e   a d d i t i o n a l l y   r e l y   o n   a   r e g u l a r l y -  
- / /   s c h e d u l e d   c h e c k s u m - r o l l u p   j o b   f o r   t a m p e r   d e t e c t i o n   ( c o v e r e d   i n   t h e  
- / /   o b s e r v a b i l i t y   s e c t i o n   o f   t h e   i m p l e m e n t a t i o n   g u i d e ) .  
-  
- m o d e l   A u d i t L o g   {  
-     i d                             S t r i n g                 @ i d   @ d e f a u l t ( a u t o ( ) )   @ m a p ( " _ i d " )   @ d b . O b j e c t I d  
-     e v e n t U i d                 S t r i n g                 @ u n i q u e   @ d e f a u l t ( u u i d ( ) )  
-  
-     a c t o r T y p e               A c t o r T y p e           / /   V E N D O R   |   A D M I N   |   F I N A N C E   |   S Y S T E M  
-     a c t o r I d                   S t r i n g ?               @ d b . O b j e c t I d     / /   n u l l   w h e n   a c t o r T y p e   =   S Y S T E M  
-  
-     e v e n t T y p e               S t r i n g                 / /   " R E Q U E S T _ C R E A T E D " ,   " Q U O T E _ I S S U E D " ,   . . .  
-     e n t i t y T y p e             S t r i n g                 / /   " d a t a _ p r o c u r e m e n t _ r e q u e s t " ,   " p a y o u t " ,   . . .  
-     e n t i t y I d                 S t r i n g                 @ d b . O b j e c t I d  
-  
-     p a y l o a d B e f o r e       J s o n ?  
-     p a y l o a d A f t e r         J s o n ?  
-     m e t a d a t a                 J s o n ?                   / /   {   i p ,   u s e r A g e n t ,   r e q u e s t I d ,   . . .   }  
-  
-     c r e a t e d A t               D a t e T i m e             @ d e f a u l t ( n o w ( ) )  
-  
-     @ @ i n d e x ( [ e n t i t y T y p e ,   e n t i t y I d ] )  
-     @ @ i n d e x ( [ a c t o r T y p e ,   a c t o r I d ] )  
-     @ @ i n d e x ( [ e v e n t T y p e ] )  
-     @ @ i n d e x ( [ c r e a t e d A t ] )  
-     @ @ m a p ( " a u d i t _ l o g " )  
- }  
-  
-  
- / /   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =  
- / /   E N U M S  
- / /   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =  
- / /  
- / /   A l l   e n u m s   n a m e d   i n   t h e   F R D   a r e   d e f i n e d   h e r e .   S t r i n g s   u s e d   i n   t h e   F R D  
- / /   ( e . g .   " B R O W S E R " ,   " S E R V E R _ F E T C H " )   a r e   k e p t   v e r b a t i m   s o   b a c k e n d   l o g s  
- / /   a n d   A P I   p a y l o a d s   m a t c h   d o c u m e n t   t e r m i n o l o g y   e x a c t l y .  
-  
- / /   - - - - -   S e n s o r   &   d a t a   d i m e n s i o n s   ( F R D   � � 6   g l o s s a r y ,   � � 8 . 3 )   - - - - - - - - - - - - - - - -  
-  
- e n u m   S e n s o r C l a s s   {  
-     R G B  
-     M S I  
-     T H E R M A L  
-     H Y P E R S P E C T R A L  
-     S A R  
-     L I D A R                     / /   a c c e p t e d   i n   m e t a d a t a   b u t   r e j e c t e d   a t   q u o t e   i n   P h a s e   1   ( F R D   O - 0 4 )  
- }  
-  
- e n u m   R e s o l u t i o n T i e r   {  
-     U L T R A _ H I G H           / /   G S D   <   2   c m                                           ( F R D   A p p e n d i x   C . 1 )  
-     H I G H                       / /   G S D   2 � �  5   c m  
-     M E D I U M                   / /   G S D   5 � �  1 5   c m  
-     S T A N D A R D               / /   G S D   >   1 5   c m  
- }  
-  
- e n u m   G s d T i e r   {  
-     S U R V E Y _ G R A D E                   / /   R M S E   <   1 0   c m                           ( F R D   A p p e n d i x   C . 2 )  
-     M A P P I N G _ G R A D E                 / /   R M S E   1 0 � �  5 0   c m  
-     I N S P E C T I O N _ G R A D E           / /   R M S E   5 0   c m   � �    2   m  
-     R E C O N N A I S S A N C E               / /   R M S E   >   2   m  
- }  
-  
- e n u m   S e a s o n   {  
-     W I N T E R                     / /   D e c � �  F e b                                               ( F R D   � � 8 . 3   m e t a d a t a )  
-     S U M M E R                     / /   M a r � �  M a y  
-     M O N S O O N                   / /   J u n � �  S e p  
-     P O S T _ M O N S O O N         / /   O c t � �  N o v  
- }  
-  
- e n u m   P r o c e s s i n g L e v e l   {  
-     R A W  
-     C O R R E C T E D               / /   r a d i o m e t r i c a l l y   c o r r e c t e d  
-     O R T H O M O S A I C  
- }  
-  
- / /   - - - - -   R e q u e s t   l i f e c y c l e   ( F R D   � � 9 . 1 0   s t a t e   m a c h i n e )   - - - - - - - - - - - - - - - - - - - - -  
-  
- e n u m   R e q u e s t S t a t e   {  
-     D R A F T                           / /   b o u n d a r y   u p l o a d e d ,   n o t   y e t   q u o t e d  
-     Q U O T E D                         / /   q u o t e   i s s u e d ,   a w a i t i n g   v e n d o r   d e c i s i o n  
-     A C C E P T E D _ Q U O T E         / /   v e n d o r   a c c e p t e d ,   s l o t   n o t   y e t   c r e a t e d  
-     A W A I T I N G _ U P L O A D       / /   r e a d y   t o   r e c e i v e   i m a g e r y  
-     I N S P E C T I N G                 / /   i n s p e c t i o n   p i p e l i n e   r u n n i n g  
-     A C C E P T E D                     / /   c o m p o s i t e   s c o r e   � 0 �   0 . 6 0 ,   p a y o u t   p e n d i n g  
-     R E J E C T E D                     / /   f i n a l   r e j e c t   ( a f t e r   a d m i n   r e v i e w   o r   q u o t e   e x p i r y )  
-     P A I D                             / /   p a y o u t   s e t t l e d  
-     P A Y O U T _ F A I L E D           / /   p a y o u t   r e t u r n e d   b y   R a z o r p a y X ,   f i n a n c e   t o   r e s o l v e  
-     A D M I N _ R E V I E W             / /   3   c u m u l a t i v e   r e j e c t i o n s  
-     E X P I R E D                       / /   q u o t e   n o t   a c c e p t e d   w i t h i n   7 2 h  
-     C A N C E L L E D                   / /   v e n d o r   a b a n d o n e d   b e f o r e   q u o t e  
- }  
-  
- e n u m   I n s p e c t i o n S t a t e   {  
-     P E N D I N G  
-     S T A G E 1 _ R U N N I N G  
-     S T A G E 2 _ R U N N I N G  
-     S C O R E D  
-     A C C E P T E D  
-     R E J E C T E D  
- }  
-  
- e n u m   Q u a l i t y T i e r   {  
-     S               / /   � 0 �   0 . 9 0   � �    0 %   d i s c o u n t  
-     A               / /   0 . 8 0 � �  0 . 8 9   � �    u p   t o   1 0 %   d i s c o u n t  
-     B               / /   0 . 7 0 � �  0 . 7 9   � �    u p   t o   2 5 %   d i s c o u n t  
-     C               / /   0 . 6 0 � �  0 . 6 9   � �    u p   t o   4 0 %   d i s c o u n t  
-     F A I L         / /   <   0 . 6 0   � �    r e j e c t e d  
- }  
-  
- e n u m   U p l o a d M o d e   {  
-     B R O W S E R                   / /   m u l t i p a r t   u p l o a d   ( F R D   F - 0 6 )  
-     S E R V E R _ F E T C H         / /   b a c k e n d   f e t c h e s   v e n d o r   U R L   ( F R D   F - 0 7 )  
- }  
-  
- / /   - - - - -   R e j e c t i o n   r e a s o n   c o d e s   ( F R D   � � 1 1 . 5 )   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
-  
- e n u m   R e j e c t i o n R e a s o n   {  
-     N O D A T A _ E X C E S S                             / /   >   1 5 %   N o D a t a   p i x e l s  
-     G S D _ M I S M A T C H                               / /   m e a s u r e d   G S D   >   2 0 %   w o r s e   t h a n   c l a i m e d  
-     C O V E R A G E _ G A P                               / /   >   1 0 %   b o u n d a r y   t i l e s   u n c o v e r e d  
-     B L U R _ E X C E S S I V E                           / /   >   3 0 %   s a m p l e d   t i l e s   o u t   o f   f o c u s  
-     B L A C K _ H O L E S                                 / /   l a r g e   u n i f o r m   r e g i o n s  
-     R A D I O M E T R I C _ D E G E N E R A T E           / /   d y n a m i c   r a n g e   <   2 0 %  
-     M E T A D A T A _ I N C O M P L E T E                 / /   m i s s i n g   c r i t i c a l   G e o T I F F   t a g s  
-     C R S _ I N V A L I D                                 / /   C R S   d o e s n ' t   l o c a t e   t o   c l a i m e d   g e o g r a p h y  
-     V L M _ S E M A N T I C _ R E J E C T                 / /   V L M   r a t e d   b e l o w   t h r e s h o l d   o n   a   r u b r i c   d i m  
-     C O M P O S I T E _ B E L O W _ F L O O R             / /   c o m p o s i t e   <   0 . 6 0 ,   n o   s i n g l e   h a r d   f a i l  
- }  
-  
- / /   - - - - -   P a y o u t   ( F R D   � � 9 . 8 )   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
-  
- e n u m   P a y o u t R a i l   {  
-     U P I  
-     I M P S  
-     N E F T  
- }  
-  
- e n u m   P a y o u t S t a t e   {  
-     Q U E U E D  
-     P R O C E S S I N G  
-     S U C C E S S  
-     F A I L E D  
-     R E V E R S E D  
- }  
-  
- / /   - - - - -   I n v e n t o r y   r i g h t s   ( F R D   � � 9 . 7 )   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
-  
- e n u m   I n v e n t o r y R i g h t s   {  
-     P E R P E T U A L _ U N L I M I T E D  
-     P E R P E T U A L _ D R O N E G E N I E _ O N L Y  
-     T E R M _ L I C E N C E  
- }  
-  
- / /   - - - - -   A u d i t   l o g   ( F R D   � � 9 . 9 )   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
-  
- e n u m   A c t o r T y p e   {  
-     V E N D O R  
-     A D M I N  
-     F I N A N C E  
-     S Y S T E M  
- }  
-  
- / /   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =   E N D   A P P E N D   = = = = = = = = = = = = = = = = = = = = = = = = = = =  
- 
+
+
+// ---------------------------------------------------------------------
+// 2. DataProcurementRequest — the parent record (FRD §9.4)
+// ---------------------------------------------------------------------
+// One request per vendor's "intent to sell". A request may yield zero or
+// one quote, and zero-to-three submission attempts. The `state` field is
+// the canonical state machine — see §9.10 of the FRD.
+//
+// `boundaryGeom` is a GeoJSON Polygon: { type: "Polygon",
+// coordinates: [ [ [lng,lat], ... ] ] }. MongoDB will index this with a
+// 2dsphere index (added via runCommandRaw migration).
+
+model DataProcurementRequest {
+  id                    String              @id @default(auto()) @map("_id") @db.ObjectId
+  requestUid            String              @unique @default(uuid())   // vendor-facing opaque ID
+
+  vendorId              String              @db.ObjectId
+  vendor                Vendor              @relation(fields: [vendorId], references: [id])
+
+  // GeoJSON Polygon. Indexed via 2dsphere migration script.
+  boundaryGeom          Json
+  areaKm2               Float
+
+  sensorClass           SensorClass
+  sensorModel           String?             // "DJI Mavic 3M"
+  captureDate           DateTime
+  claimedGsdCm          Float
+  positionalAccuracyM   Float
+  crsCode               String              // "EPSG:32643", "EPSG:4326", etc.
+  seasonTag             Season              // computed from captureDate
+  processingLevel       ProcessingLevel
+  weatherNotes          String?
+
+  state                 RequestState        @default(DRAFT)
+
+  // Coverage check outcome — full audit payload (FRD AC-F03-03)
+  coverageCheckResult   Json?
+
+  // Quote fields (populated when state >= QUOTED)
+  quoteAmountInr        Int?                // gross, in paise
+  ceilingRateId         String?             @db.ObjectId       // which rate row was used
+  qualityEstimate       Float?
+  qualityTierEstimate   QualityTier?        // S/A/B/C estimate at quote
+  discountPctEstimate   Float?
+  quoteIssuedAt         DateTime?
+  quoteExpiresAt        DateTime?           // 72h after issuance (FRD AC-F04-04)
+  quoteAcceptedAt       DateTime?
+  quoteDeclineReason    String?
+
+  // Retry tracking — max 3 attempts (FRD §8.12)
+  attemptsCount         Int                 @default(0)
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  // Relations
+  submissions           DataSubmission[]
+  payouts               Payout[]
+
+  @@index([vendorId, state])
+  @@index([state])
+  @@index([createdAt])
+  @@map("data_procurement_requests")
+}
+
+
+// ---------------------------------------------------------------------
+// 3. DataSubmission — one record per upload attempt (FRD §9.5)
+// ---------------------------------------------------------------------
+// A single request can have up to 3 submissions (initial + 2 retries).
+// Each submission has exactly one quality_inspection record once
+// inspection completes.
+
+model DataSubmission {
+  id                    String                  @id @default(auto()) @map("_id") @db.ObjectId
+
+  requestId             String                  @db.ObjectId
+  request               DataProcurementRequest  @relation(fields: [requestId], references: [id])
+
+  attemptNumber         Int                     // 1, 2, or 3
+
+  uploadMode            UploadMode              // BROWSER | SERVER_FETCH
+  sourceUrls            String[]                // populated for SERVER_FETCH only
+  storagePath           String                  // OCI prefix for this attempt's bytes
+
+  totalBytes            BigInt?                 // BigInt because >2GB is common
+  fileCount             Int?
+  sha256Manifest        String?                 // SHA-256 of concatenated per-file checksums
+
+  uploadStartedAt       DateTime                @default(now())
+  uploadCompletedAt     DateTime?
+
+  inspectionState       InspectionState         @default(PENDING)
+  rejectionReasons      RejectionReason[]       // empty unless REJECTED
+
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  inspection            QualityInspection?
+
+  @@unique([requestId, attemptNumber])
+  @@index([requestId])
+  @@index([inspectionState])
+  @@map("data_submissions")
+}
+
+
+// ---------------------------------------------------------------------
+// 4. QualityInspection — Stage 1 + Stage 2 results (FRD §9.6)
+// ---------------------------------------------------------------------
+// Kept as a separate model rather than columns on DataSubmission so we
+// can re-inspect (e.g. after a model upgrade) without overwriting the
+// original verdict. `stage1Metrics` is a JSON object containing every
+// individual CV check result; `stage2Rationale` is the verbatim VLM
+// response (FRD AC-F09-03 — no silent summarisation).
+
+model QualityInspection {
+  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
+
+  submissionId        String          @unique @db.ObjectId
+  submission          DataSubmission  @relation(fields: [submissionId], references: [id])
+
+  // Stage 1: classical CV
+  stage1Score         Float?
+  stage1Metrics       Json?           // { noDataPct, gsdDelta, blurVar, ... per check }
+  stage1CompletedAt   DateTime?
+
+  // Stage 2: VLM
+  stage2Score         Float?
+  stage2Rationale     String?         // verbatim Claude response
+  stage2RawResponse   Json?           // full structured rubric output
+  stage2CompletedAt   DateTime?
+
+  // Composite + decision
+  compositeScore      Float?
+  tier                QualityTier?    // S | A | B | C | FAIL
+  finalDiscountPct    Float?
+
+  // Reproducibility
+  inspectorVersion    String          // e.g. "stage1-v1.2 | stage2-claude-3-7-sonnet"
+  previewTilePaths    String[]        // OCI paths of the tiles sent to VLM
+
+  createdAt           DateTime        @default(now())
+  completedAt         DateTime?
+
+  @@map("quality_inspections")
+}
+
+
+// ---------------------------------------------------------------------
+// 5. ImageryInventory — accepted imagery catalog (FRD §9.7)
+// ---------------------------------------------------------------------
+// Source-of-truth for the coverage check on subsequent submissions.
+// `extentGeom` carries a GeoJSON Polygon and is indexed via 2dsphere.
+
+model ImageryInventory {
+  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
+
+  submissionId        String          @db.ObjectId       // provenance
+  vendorId            String          @db.ObjectId       // original vendor
+
+  extentGeom          Json            // GeoJSON Polygon
+  sensorClass         SensorClass
+  gsdCm               Float
+  seasonTag           Season
+  captureDate         DateTime
+
+  storageUri          String          // canonical inventory bucket URI
+  tileIndexUri        String?         // pre-generated tile index, if any
+
+  rights              InventoryRights
+  licenceExpiry       DateTime?       // for TERM_LICENCE only
+
+  acquisitionCostInr  Int             // gross paise — for accounting
+
+  createdAt           DateTime        @default(now())
+
+  @@index([sensorClass, seasonTag])
+  @@index([captureDate])
+  @@map("imagery_inventory")
+}
+
+
+// ---------------------------------------------------------------------
+// 6. Payout — outbound payment ledger (FRD §9.8)
+// ---------------------------------------------------------------------
+// Reconciled against RazorpayX. Idempotency key is requestUid + "-" +
+// attemptNumber, enforced in the service layer.
+
+model Payout {
+  id                  String                  @id @default(auto()) @map("_id") @db.ObjectId
+
+  requestId           String                  @db.ObjectId
+  request               DataProcurementRequest  @relation(fields: [requestId], references: [id])
+
+  vendorId            String                  @db.ObjectId
+
+  grossAmountInr      Int                     // paise
+  tdsRateBps          Int                     // basis points: 200 = 2%, 2000 = 20%
+  tdsAmountInr        Int                     // paise withheld
+  netAmountInr        Int                     // paise paid
+
+  rail                PayoutRail              // UPI | IMPS | NEFT
+  destination         String                  // VPA or masked account number
+
+  razorpayxPayoutId   String?                 @unique
+  utr                 String?                 // bank UTR after settlement
+
+  state               PayoutState             @default(QUEUED)
+  failureReason       String?                 // populated only on FAILED
+
+  initiatedAt         DateTime                @default(now())
+  settledAt           DateTime?
+
+  @@index([requestId])
+  @@index([vendorId])
+  @@index([state])
+  @@map("payouts")
+}
+
+
+// ---------------------------------------------------------------------
+// 7. AuditLog — append-only immutable audit trail (FRD §9.9)
+// ---------------------------------------------------------------------
+// MongoDB has no triggers, so immutability is enforced in the service
+// layer: only an `auditLog.create` is exposed; update/delete are
+// disallowed by repository design. We additionally rely on a regularly-
+// scheduled checksum-rollup job for tamper detection (covered in the
+// observability section of the implementation guide).
+
+model AuditLog {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  eventUid        String        @unique @default(uuid())
+
+  actorType       ActorType     // VENDOR | ADMIN | FINANCE | SYSTEM
+  actorId         String?       @db.ObjectId  // null when actorType = SYSTEM
+
+  eventType       String        // "REQUEST_CREATED", "QUOTE_ISSUED", ...
+  entityType      String        // "data_procurement_request", "payout", ...
+  entityId        String        @db.ObjectId
+
+  payloadBefore   Json?
+  payloadAfter    Json?
+  metadata        Json?         // { ip, userAgent, requestId, ... }
+
+  createdAt       DateTime      @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorType, actorId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+
+// =====================================================================
+// ENUMS
+// =====================================================================
+//
+// All enums named in the FRD are defined here. Strings used in the FRD
+// (e.g. "BROWSER", "SERVER_FETCH") are kept verbatim so backend logs
+// and API payloads match document terminology exactly.
+
+// ----- Sensor & data dimensions (FRD §6 glossary, §8.3) ----------------
+
+enum SensorClass {
+  RGB
+  MSI
+  THERMAL
+  HYPERSPECTRAL
+  SAR
+  LIDAR          // accepted in metadata but rejected at quote in Phase 1 (FRD O-04)
+}
+
+enum ResolutionTier {
+  ULTRA_HIGH     // GSD < 2 cm                     (FRD Appendix C.1)
+  HIGH           // GSD 2–5 cm
+  MEDIUM         // GSD 5–15 cm
+  STANDARD       // GSD > 15 cm
+}
+
+enum GsdTier {
+  SURVEY_GRADE         // RMSE < 10 cm             (FRD Appendix C.2)
+  MAPPING_GRADE        // RMSE 10–50 cm
+  INSPECTION_GRADE     // RMSE 50 cm – 2 m
+  RECONNAISSANCE       // RMSE > 2 m
+}
+
+enum Season {
+  WINTER          // Dec–Feb                       (FRD §8.3 metadata)
+  SUMMER          // Mar–May
+  MONSOON         // Jun–Sep
+  POST_MONSOON    // Oct–Nov
+}
+
+enum ProcessingLevel {
+  RAW
+  CORRECTED       // radiometrically corrected
+  ORTHOMOSAIC
+}
+
+// ----- Request lifecycle (FRD §9.10 state machine) ---------------------
+
+enum RequestState {
+  DRAFT             // boundary uploaded, not yet quoted
+  QUOTED            // quote issued, awaiting vendor decision
+  ACCEPTED_QUOTE    // vendor accepted, slot not yet created
+  AWAITING_UPLOAD   // ready to receive imagery
+  INSPECTING        // inspection pipeline running
+  ACCEPTED          // composite score ≥ 0.60, payout pending
+  REJECTED          // final reject (after admin review or quote expiry)
+  PAID              // payout settled
+  PAYOUT_FAILED     // payout returned by RazorpayX, finance to resolve
+  ADMIN_REVIEW      // 3 cumulative rejections
+  EXPIRED           // quote not accepted within 72h
+  CANCELLED         // vendor abandoned before quote
+}
+
+enum InspectionState {
+  PENDING
+  STAGE1_RUNNING
+  STAGE2_RUNNING
+  SCORED
+  ACCEPTED
+  REJECTED
+}
+
+enum QualityTier {
+  S       // ≥ 0.90 — 0% discount
+  A       // 0.80–0.89 — up to 10% discount
+  B       // 0.70–0.79 — up to 25% discount
+  C       // 0.60–0.69 — up to 40% discount
+  FAIL    // < 0.60 — rejected
+}
+
+enum UploadMode {
+  BROWSER         // multipart upload (FRD F-06)
+  SERVER_FETCH    // backend fetches vendor URL (FRD F-07)
+}
+
+// ----- Rejection reason codes (FRD §11.5) ------------------------------
+
+enum RejectionReason {
+  NODATA_EXCESS              // > 15% NoData pixels
+  GSD_MISMATCH               // measured GSD > 20% worse than claimed
+  COVERAGE_GAP               // > 10% boundary tiles uncovered
+  BLUR_EXCESSIVE             // > 30% sampled tiles out of focus
+  BLACK_HOLES                // large uniform regions
+  RADIOMETRIC_DEGENERATE     // dynamic range < 20%
+  METADATA_INCOMPLETE        // missing critical GeoTIFF tags
+  CRS_INVALID                // CRS doesn't locate to claimed geography
+  VLM_SEMANTIC_REJECT        // VLM rated below threshold on a rubric dim
+  COMPOSITE_BELOW_FLOOR      // composite < 0.60, no single hard fail
+}
+
+// ----- Payout (FRD §9.8) ----------------------------------------------
+
+enum PayoutRail {
+  UPI
+  IMPS
+  NEFT
+}
+
+enum PayoutState {
+  QUEUED
+  PROCESSING
+  SUCCESS
+  FAILED
+  REVERSED
+}
+
+// ----- Inventory rights (FRD §9.7) -------------------------------------
+
+enum InventoryRights {
+  PERPETUAL_UNLIMITED
+  PERPETUAL_DRONEGENIE_ONLY
+  TERM_LICENCE
+}
+
+// ----- Audit log (FRD §9.9) -------------------------------------------
+
+enum ActorType {
+  VENDOR
+  ADMIN
+  FINANCE
+  SYSTEM
+}
