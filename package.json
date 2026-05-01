@@ -58,7 +58,7 @@
     "reflect-metadata": "^0.2.0",
     "rss-parser": "^3.13.0",
     "rxjs": "^7.8.1",
-    "uuidv4": "^6.2.13",
+    "uuid": "^14.0.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
@@ -70,6 +70,7 @@
     "@types/node": "^20.3.1",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.0",
+    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^8.42.0",
