@@ -45,25 +45,40 @@ import { SeoMetaModule } from './seo-meta/seo-meta.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    // Global IP-based rate limiter. Default is permissive (60 req/min) to
+    // Global IP-based rate limiter. Default is permissive (180 req/min) to
     // avoid breaking normal UI usage; sensitive routes (auth/*, razorpay-webhook
     // debug paths) override with stricter limits using @Throttle({...}) on the
     // specific handler. See src/auth/auth.controller.ts.
+    //
+    // NestJS ThrottlerGuard applies EVERY registered throttler to EVERY route,
+    // so auth-strict / otp-strict need a skipIf that restricts them to /auth/*;
+    // otherwise their narrow buckets (10/15min, 20/hr) get consumed by ordinary
+    // UI traffic and users hit 429 on unrelated pages.
     ThrottlerModule.forRoot([
       {
         name: 'default',
         ttl: 60_000,       // 1 minute window
-        limit: 60,         // 60 requests per IP per minute
+        limit: 180,        // 180 requests per IP per minute
       },
       {
         name: 'auth-strict',
         ttl: 15 * 60_000,  // 15 minute window
         limit: 10,         // 10 auth attempts per IP per 15 min
+        skipIf: (ctx) => {
+          const req = ctx.switchToHttp().getRequest();
+          const path: string = req?.url || req?.originalUrl || '';
+          return !path.startsWith('/auth/');
+        },
       },
       {
         name: 'otp-strict',
         ttl: 60 * 60_000,  // 1 hour window
         limit: 20,         // 20 OTP verification attempts per IP per hour
+        skipIf: (ctx) => {
+          const req = ctx.switchToHttp().getRequest();
+          const path: string = req?.url || req?.originalUrl || '';
+          return !path.startsWith('/auth/');
+        },
       },
     ]),
     AuthModule,

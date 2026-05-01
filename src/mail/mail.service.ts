@@ -261,4 +261,57 @@ export class MailService {
       return { success: false, error: error.message };
     }
   }
+<<<<<<< Updated upstream
+
+  async sendChatInquiry(args: {
+    fromName: string;
+    fromEmail: string;
+    fromPhone?: string;
+    subject: string;
+    message: string;
+    inquiryType?: string;
+  }) {
+    const inbox = process.env.CHAT_INQUIRY_INBOX || process.env.GMAIL_USER;
+    if (!inbox) return { success: false, error: 'inbox not configured' };
+
+    const safe = (s: string) =>
+      String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    const subject = `[Drone Genie chat] ${safe(args.subject).slice(0, 120)}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #149C6C, #0f7a54); color: #fff; padding: 24px 28px; border-radius: 12px 12px 0 0;">
+          <h2 style="margin: 0; font-size: 20px;">Drone Genie chat enquiry</h2>
+          <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">${safe(args.inquiryType || 'general')}</p>
+        </div>
+        <div style="background: #fff; border: 1px solid #149C6C33; border-top: none; padding: 24px 28px; border-radius: 0 0 12px 12px;">
+          <table style="width: 100%; font-size: 14px; color: #1f2937; line-height: 1.5;">
+            <tr><td style="font-weight: 600; padding: 4px 12px 4px 0;">From:</td><td>${safe(args.fromName)} &lt;${safe(args.fromEmail)}&gt;</td></tr>
+            ${args.fromPhone ? `<tr><td style="font-weight: 600; padding: 4px 12px 4px 0;">Phone:</td><td>${safe(args.fromPhone)}</td></tr>` : ''}
+            <tr><td style="font-weight: 600; padding: 4px 12px 4px 0; vertical-align: top;">Subject:</td><td>${safe(args.subject)}</td></tr>
+          </table>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+          <div style="white-space: pre-wrap; font-size: 14px; color: #111827; line-height: 1.6;">${safe(args.message)}</div>
+        </div>
+      </div>`;
+
+    try {
+      await this.transporter.sendMail({
+        from: process.env.GMAIL_USER,
+        to: inbox,
+        replyTo: `${args.fromName} <${args.fromEmail}>`,
+        subject,
+        html,
+      });
+      return { success: true };
+    } catch (error: any) {
+      console.error('Chat inquiry email failed:', error);
+      return { success: false, error: error?.message || 'send failed' };
+    }
+  }
+=======
+>>>>>>> Stashed changes
 }
