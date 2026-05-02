@@ -16,12 +16,19 @@ dotenv.config();
 
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:4000',
   'http://143.244.141.92',
   'https://dronegenie.in',
   'https://www.dronegenie.in',
   'https://dronegenie.aipower.guru',
   'https://drone-genie-phi.vercel.app',
 ];
+
+if (process.env.ALLOWED_ORIGINS) {
+  const origins = process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
+  allowedOrigins.push(...origins);
+}
 
 async function bootstrap() {
   const isProd = process.env.ENV === 'PROD';
